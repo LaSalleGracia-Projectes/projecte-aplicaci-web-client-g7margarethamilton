@@ -1,1 +1,1 @@
-# projecte-aplicaciO-web-client-g7margarethamilton
+# projecte-aplicacio-web-client-g7margarethamilton
