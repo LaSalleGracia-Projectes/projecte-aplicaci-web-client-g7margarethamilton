@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
+import Navbar from "@/components/navbar";
 
 export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Navbar (Aún no implementado) */}
-      <header className="w-full p-4 bg-white dark:bg-gray-800 shadow-md fixed top-0">
-        <h1 className="text-xl font-bold text-center">FLOW2DAY!</h1>
+      <header className="w-full bg-flow-white dark:bg-flow-black shadow-md fixed top-0 z-10">
+        <Navbar></Navbar>
       </header>
 
       <div id="main-content"> 
