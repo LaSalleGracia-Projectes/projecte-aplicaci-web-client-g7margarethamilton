@@ -509,6 +509,10 @@ body {
   margin-top: 2rem;
 }
 
+.inline-block {
+  display: inline-block;
+}
+
 .flex {
   display: flex;
 }

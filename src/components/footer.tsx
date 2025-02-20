@@ -41,7 +41,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-8 border-t border-[#6D7D8B] text-center">
-          <p className="text-[#BBC8D4]">&copy; {new Date().getFullYear()} Flow2day!. All rights reserved.</p>
+          <p className="text-[#BBC8D4]">&copy; {new Date().getFullYear()} FLOW2DAY!. All rights reserved.</p>
         </div>
       </div>
     </footer>
