@@ -12,13 +12,13 @@ import { Button } from "@/components/ui/button"
 export default function Navbar() {
   return (
     <nav className="container mx-auto px-4">
-      <div className="flex justify-between items-center py-4">
+      <div className="flex justify-between items-center h-16">
         <Link href="/" className="text-2xl font-bold text-flow-black dark:text-flow-white">
           FLOW2DAY
         </Link>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-8">
           <NavigationMenu>
-            <NavigationMenuList>
+            <NavigationMenuList className="space-x-6">
               <NavigationMenuItem>
                 <Link href="/about" legacyBehavior passHref>
                   <NavigationMenuLink className="text-flow-grey hover:text-flow-blue dark:text-flow-light-grey dark:hover:text-flow-blue">
