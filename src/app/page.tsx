@@ -8,11 +8,12 @@ import Footer from "@/components/footer";
 export default function Home() {
   return (
     <main className="flex flex-col min-h-screen bg-flow-white dark:bg-flow-black">
-      <header className="w-full bg-flow-white/80 dark:bg-flow-black/80 backdrop-blur-sm border-b border-flow-ultra-light-grey dark:border-flow-grey/20 fixed top-0 z-10"></header>
       <Navbar /> 
+      <div id="navbar-separator" className="pt-16">
       <Hero />
       <Features />
       <Footer />
+      </div>
     </main>
   );
 }
