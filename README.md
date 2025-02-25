@@ -22,13 +22,13 @@ node -v
 npm -v
 ````
 ---
-# 🛠 Instalación
+## 🛠 Instalación
 - Clona el repositorio y accede a la carpeta del proyecto.
 - instala las dependencias con:
 ```sh
 npm install
 ````
-# 🚀 Ejecutar el Proyecto
+## 🚀 Ejecutar el Proyecto
 - Para iniciar el entorno de desarrollo:
 ```sh
 npm run dev
