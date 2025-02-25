@@ -28,6 +28,7 @@ npm -v
 ```sh
 npm install
 ````
+---
 ## 🚀 Ejecutar el Proyecto
 - Para iniciar el entorno de desarrollo:
 ```sh
