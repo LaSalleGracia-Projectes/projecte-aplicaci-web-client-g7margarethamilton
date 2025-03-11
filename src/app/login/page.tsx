@@ -26,7 +26,7 @@ const LoginPage = () => {
     if (error) {
       setError(error.message);
     } else {
-      router.push("/"); // Redirigir al home o dashboard
+      router.replace("/dashboard"); // Redirigir al home o dashboard
     }
 
     setLoading(false);

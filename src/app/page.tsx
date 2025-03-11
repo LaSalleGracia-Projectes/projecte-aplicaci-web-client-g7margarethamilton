@@ -1,20 +1,33 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/providers";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/ui/header";
 
 export default function Homepage() {
-  const { scrollYProgress } = useScroll();
+  const { scrollYProgress } = useScroll(); // ✅ Hook siempre en el mismo orden
   const parallaxY = useTransform(scrollYProgress, [0, 1], [0, -300]);
-  
+
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  // 🔄 Redirección si el usuario está autenticado
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, loading, router]);
+
+  // 🔽 Manejo de scroll para ocultar el header
   const [hidden, setHidden] = useState(false);
   useEffect(() => {
     const handleScroll = () => setHidden(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-  
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <motion.div 
