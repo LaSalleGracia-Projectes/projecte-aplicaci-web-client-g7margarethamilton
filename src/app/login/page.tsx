@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import supabase from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+// import { Dialog }  from "@/components/ui/dialog";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
