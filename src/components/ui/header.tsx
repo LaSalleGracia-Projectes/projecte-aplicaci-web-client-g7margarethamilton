@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "@/components/ui/navigation-menu"
-import { MoonIcon, SunIcon, UserIcon } from 'lucide-react'
-import { useTheme } from "next-themes"
-import { useAuth } from "@/app/providers"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import supabase from "@/lib/supabase"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "@/components/ui/navigation-menu";
+import { MoonIcon, SunIcon, UserIcon } from 'lucide-react';
+import { useTheme } from "next-themes";
+import { useAuth } from "@/app/providers";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import supabase from "@/lib/supabase";
 
 export default function Header() {
-  const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
-  const { user } = useAuth() // Obtiene el usuario autenticado
+  const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  const { user } = useAuth(); // Obtiene el usuario autenticado
 
   return (
     <header className="bg-background/80 backdrop-blur-sm shadow-sm">
@@ -25,7 +25,7 @@ export default function Header() {
         <NavigationMenu>
           <NavigationMenuList className="hidden md:flex gap-6">
             {[
-              { href: "/about", label: "About us" },
+              { href: "/about-us", label: "About us" },
               { href: "/contact", label: "Contact" },
             ].map((item) => (
               <NavigationMenuItem key={item.href}>
@@ -89,5 +89,5 @@ export default function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }
