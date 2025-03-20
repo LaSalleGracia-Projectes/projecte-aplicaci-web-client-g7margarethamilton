@@ -1,5 +1,7 @@
 "use client";
 
+//TODO: AÑADIR SLIDER DE FOTOS Y EQUIPO
+//TODO: AÑADIR LISTAS CON DESPLEGABLE EN TECNOLOGÍAS UTILIZADAS
 // Cargar componentes de Framer Motion solo en el cliente
 import Header from "@/components/ui/header";
 import dynamic from "next/dynamic";
@@ -65,7 +67,7 @@ export default function AboutUsPage() {
             transition={{ duration: 0.6 }}
             className="text-2xl font-bold mb-6"
             >
-                Idea Principal
+                Idea Principal 💡
         </MotionH2>
         <MotionP
             initial={{ opacity: 0 }}
@@ -73,7 +75,7 @@ export default function AboutUsPage() {
             transition={{ delay: 0.3, duration: 0.8 }}
             className="text-lg text-muted-foreground"
             >
-                Flow2Day es una aplicación web que te ayuda a organizar tus tareas y
+                Flow2Day es una aplicación tanto web como mobil que te ayuda a organizar tus tareas y
                 alcanzar tus metas.
         </MotionP>
 
@@ -85,7 +87,7 @@ export default function AboutUsPage() {
             transition={{ duration: 0.6 }}
             className="text-2xl font-bold mb-6"
             >
-                Tecnologias Utilizadas
+                Tecnologias Utilizadas ⚙️
         </MotionH2>
         <MotionP
             initial={{ opacity: 0 }}
@@ -93,9 +95,7 @@ export default function AboutUsPage() {
             transition={{ delay: 0.3, duration: 0.8 }}
             className="text-lg text-muted-foreground"
             >
-            Aquí puedes añadir más contenido sobre el proyecto, el equipo, o
-            cualquier otra información relevante. La página se expandirá
-            automáticamente para acomodar el nuevo contenido.
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas voluptatum provident natus dolores esse velit ducimus est soluta possimus pariatur.
             </MotionP>
         </div>
 
@@ -113,12 +113,11 @@ export default function AboutUsPage() {
             transition={{ duration: 0.6 }}
             className="text-2xl font-bold mb-6"
             >
-            Team Flow2Day!
+            Team Flow2Day! ✨
             </MotionH2>
         </div>
     </div>
 
-      {/* Footer */}
         <footer className="bg-secondary py-8 text-center">
         <p className="text-sm text-muted-foreground">
             Hecho con ❤️ y Next.js | © {new Date().getFullYear()} Flow2Day
