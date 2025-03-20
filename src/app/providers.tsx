@@ -1,53 +1,88 @@
 "use client";
 
+import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
-import { User } from "@supabase/supabase-js";
-import supabase from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+
+type User = {
+  email: string;
+  nickname: string;
+};
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  login: (email: string, password: string) => Promise<void>;
   logOut: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// 🔹 Creamos una instancia de axios que actualiza automáticamente el token
+const api = axios.create({
+  baseURL: "http://localhost:3000/api/v1/auth/web",
+  headers: { "Content-Type": "application/json" },
+});
+
+// 🔹 Interceptor para agregar el token automáticamente en cada request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
+  // ✅ 1️⃣ Cargar usuario si hay un token
   useEffect(() => {
-    // Recupera el usuario actual al cargar la app
-    const getUser = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) console.error("Error obteniendo sesión:", error);
-      
-      setUser(data?.session?.user ?? null);
-      setLoading(false);
+    const fetchUser = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data } = await api.get("/profile"); // 👈 Reemplaza con tu endpoint de perfil
+        setUser(data);
+      } catch (error) {
+        console.error("Token inválido o expirado:", error);
+        logOut();
+      } finally {
+        setLoading(false);
+      }
     };
 
-    getUser();
-
-    // Escucha cambios en la autenticación
-    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    fetchUser();
   }, []);
-  
-  const logOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    window.location.href = "/"
+
+  // ✅ 2️⃣ Función de login
+  const login = async (email: string, password: string) => {
+    try {
+      const { data } = await api.post("/login", { email, password });
+      localStorage.setItem("token", data.token);
+      setUser(data.user);
+      router.push("/dashboard"); // 👈 Redirigir al dashboard
+    } catch (error) {
+      console.error("Error en login:", error);
+      throw error;
+    }
   };
-  
+
+  // ✅ 3️⃣ Función de logout
+  const logOut = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    router.push("/login") // 👈 Redirigir al login
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, logOut }}>
+    <AuthContext.Provider value={{ user, loading, login, logOut }}>
       {children}
     </AuthContext.Provider>
   );

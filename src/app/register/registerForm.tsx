@@ -6,12 +6,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterForm() {
   const [form, setForm] = useState({ email: "", password: "", nickname: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -29,6 +31,9 @@ export default function RegisterForm() {
         form
       );
       setSuccess("Usuario registrado con éxito");
+      setTimeout(() => {
+        router.push("/login")
+      }, 2000)
       console.log("Registro exitoso:", data);
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;

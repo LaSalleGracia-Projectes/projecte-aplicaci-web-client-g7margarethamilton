@@ -2,39 +2,38 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "@/lib/supabase";
+import { useAuth } from "@/app/providers";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-// import { Dialog }  from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
 
 const LoginPage = () => {
+  const { login } = useAuth(); // ✅ Usamos `useAuth()` en lugar de axios
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      router.replace("/dashboard"); // Redirigir al home o dashboard
+    try {
+      await login(email, password); // ✅ Llamamos a `login()`
+      router.push("/dashboard"); // Redirigir al dashboard
+    } catch (error) {
+      console.error("Error en inicio de sesión:", error);
+      setError("Error en el inicio de sesión");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
+    <Card className="w-full max-w-sm shadow-lg p-4 mx-auto mt-8 bg-white rounded-lg border border-gray-200 space-y-4">
       <h1 className="text-2xl font-bold mb-4">Iniciar Sesión</h1>
       <form onSubmit={handleLogin} className="flex flex-col gap-3">
         <Input
@@ -44,6 +43,7 @@ const LoginPage = () => {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        <Separator />
         <Input
           type="password"
           placeholder="Contraseña"
@@ -56,7 +56,7 @@ const LoginPage = () => {
         </Button>
       </form>
       {error && <p className="text-red-500 mt-2">{error}</p>}
-    </div>
+    </Card>
   );
 };
 
