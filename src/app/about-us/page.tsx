@@ -4,7 +4,7 @@
 import Header from "@/components/ui/header";
 import dynamic from "next/dynamic";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion"
-import { siNextdotjs } from "simple-icons/icons";
+import { siNextdotjs, siKotlin, siNodedotjs } from "simple-icons/icons";
 
 
 const MotionH1 = dynamic(
@@ -102,18 +102,54 @@ export default function AboutUsPage() {
             >
                 Tecnologias Utilizadas ⚙️
         </MotionH2>
-
-            <h3 className="text-xl font-semibold mt-6 mb-4">Web</h3>
+        <MotionP
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="text-lg text-muted-foreground"
+            >
+                A continuación se muestran las tecnologías utilizadas en el proyecto:
+        </MotionP>
             <Accordion type="single" collapsible>
             <AccordionItem value="item-1">
                 <AccordionTrigger>
+                WEB
+                </AccordionTrigger>
+                <AccordionContent>
                 <div className="flex items-center gap-2">
                     <Icon icon={siNextdotjs} className="w-5 h-5" />
                     Next.js
                 </div>
+                Next.js es un framework de React que permite la renderización del lado del servidor (SSR) y la generación de sitios estáticos (SSG).
+                </AccordionContent>
+            </AccordionItem>
+            </Accordion>
+
+            <Accordion type="single" collapsible>
+            <AccordionItem value="item-2">
+                <AccordionTrigger>
+                APP
                 </AccordionTrigger>
                 <AccordionContent>
-                Next.js es un framework de React que permite la renderización del lado del servidor (SSR) y la generación de sitios estáticos (SSG).
+                <div className="flex items-center gap-2">
+                    <Icon icon={siKotlin} className="w-5 h-5" />
+                    Kotlin
+                </div>
+                Kotlin es un lenguaje de programación moderno utilizado para el desarrollo de aplicaciones Android.
+                </AccordionContent>
+            </AccordionItem>
+            </Accordion>
+            <Accordion type="single" collapsible>
+            <AccordionItem value="item-2">
+                <AccordionTrigger>
+                BACKEND
+                </AccordionTrigger>
+                <AccordionContent>
+                <div className="flex items-center gap-2">
+                    <Icon icon={siNodedotjs} className="w-5 h-5" />
+                    Node.js
+                </div>
+                Node.js es un entorno de ejecución de JavaScript en el servidor que utilizamos para construir APIs y servicios backend.
                 </AccordionContent>
             </AccordionItem>
             </Accordion>
