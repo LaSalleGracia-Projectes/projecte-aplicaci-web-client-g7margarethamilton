@@ -5,6 +5,8 @@
 // Cargar componentes de Framer Motion solo en el cliente
 import Header from "@/components/ui/header";
 import dynamic from "next/dynamic";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion"
+
 
 const MotionH1 = dynamic(
     () => import("framer-motion").then((mod) => mod.motion.h1),
@@ -97,6 +99,21 @@ export default function AboutUsPage() {
             >
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas voluptatum provident natus dolores esse velit ducimus est soluta possimus pariatur.
             </MotionP>
+            <Accordion type="single" collapsible>
+                <AccordionItem value="item-1">
+                    <AccordionTrigger>GitHub</AccordionTrigger>
+                    <AccordionContent>
+                        GitHub es una erramienta to guapa maravillosa y que te revienta la cabepsa.
+                    </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-2">
+                    <AccordionTrigger>Huevos</AccordionTrigger>
+                    <AccordionContent>
+                        GitHub es una erramienta to guapa maravillosa y que te revienta la cabepsa.
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+
         </div>
 
         {/* Columna derecha: Slider de fotos y equipo */}
