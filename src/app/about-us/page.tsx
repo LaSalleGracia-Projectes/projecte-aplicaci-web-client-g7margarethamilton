@@ -106,12 +106,7 @@ export default function AboutUsPage() {
                         GitHub es una erramienta to guapa maravillosa y que te revienta la cabepsa.
                     </AccordionContent>
                 </AccordionItem>
-                <AccordionItem value="item-2">
-                    <AccordionTrigger>Huevos</AccordionTrigger>
-                    <AccordionContent>
-                        GitHub es una erramienta to guapa maravillosa y que te revienta la cabepsa.
-                    </AccordionContent>
-                </AccordionItem>
+                
             </Accordion>
 
         </div>
