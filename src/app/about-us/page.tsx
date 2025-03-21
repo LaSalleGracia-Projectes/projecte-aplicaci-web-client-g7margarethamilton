@@ -1,11 +1,10 @@
 "use client";
 
-//TODO: AÑADIR SLIDER DE FOTOS Y EQUIPO
-//TODO: AÑADIR LISTAS CON DESPLEGABLE EN TECNOLOGÍAS UTILIZADAS
 // Cargar componentes de Framer Motion solo en el cliente
 import Header from "@/components/ui/header";
 import dynamic from "next/dynamic";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion"
+import { siNextdotjs } from "simple-icons/icons";
 
 
 const MotionH1 = dynamic(
@@ -21,6 +20,18 @@ const MotionH2 = dynamic(
 const MotionP = dynamic(
     () => import("framer-motion").then((mod) => mod.motion.p),
     { ssr: false }
+);
+
+const Icon = ({ icon, className }: { icon: any; className?: string }) => (
+    <svg
+        role="img"
+        viewBox="0 0 24 24"
+        className={className}
+        fill="currentColor"
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <path d={icon.path} />
+    </svg>
 );
 
 export default function AboutUsPage() {
@@ -91,27 +102,24 @@ export default function AboutUsPage() {
             >
                 Tecnologias Utilizadas ⚙️
         </MotionH2>
-        <MotionP
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="text-lg text-muted-foreground"
-            >
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas voluptatum provident natus dolores esse velit ducimus est soluta possimus pariatur.
-            </MotionP>
-            <Accordion type="single" collapsible>
-                <AccordionItem value="item-1">
-                    <AccordionTrigger>GitHub</AccordionTrigger>
-                    <AccordionContent>
-                        GitHub es una erramienta to guapa maravillosa y que te revienta la cabepsa.
-                    </AccordionContent>
-                </AccordionItem>
-                
-            </Accordion>
 
+            <h3 className="text-xl font-semibold mt-6 mb-4">Web</h3>
+            <Accordion type="single" collapsible>
+            <AccordionItem value="item-1">
+                <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                    <Icon icon={siNextdotjs} className="w-5 h-5" />
+                    Next.js
+                </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                Next.js es un framework de React que permite la renderización del lado del servidor (SSR) y la generación de sitios estáticos (SSG).
+                </AccordionContent>
+            </AccordionItem>
+            </Accordion>
         </div>
 
-        {/* Columna derecha: Slider de fotos y equipo */}
+        {/* Columna derecha: Slider de fotos y equipo  //TODO: AÑADIR SLIDER DE FOTOS Y EQUIPO } */}
         <div className="w-full md:w-1/2 space-y-8">
             <div className="bg-gray-100 rounded-lg p-8">
             <p className="text-center text-muted-foreground">
