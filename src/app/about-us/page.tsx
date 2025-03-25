@@ -4,7 +4,7 @@
 import Header from "@/components/ui/header";
 import dynamic from "next/dynamic";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion"
-import { siNextdotjs, siKotlin, siNodedotjs } from "simple-icons/icons";
+import { siNextdotjs, siKotlin, siNodedotjs, siGithub, siFigma, siNotion, siSupabase, siAndroid, siReact, siTypescript } from "simple-icons/icons";
 
 
 const MotionH1 = dynamic(
@@ -121,6 +121,22 @@ export default function AboutUsPage() {
                     Next.js
                 </div>
                 Next.js es un framework de React que permite la renderización del lado del servidor (SSR) y la generación de sitios estáticos (SSG).
+
+                <hr className="my-4 border-t border-gray-200" />
+
+                <div className="flex items-center gap-2">
+                    <Icon icon={siReact} className="w-5 h-5" />
+                    React.tsx
+                </div>
+                React es una biblioteca de JavaScript para construir interfaces de usuario interactivas y reutilizables.
+
+                <hr className="my-4 border-t border-gray-200" />
+
+                <div className="flex items-center gap-2">
+                    <Icon icon={siTypescript} className="w-5 h-5" />
+                    TypeScript
+                </div>
+                TypeScript es un superconjunto de JavaScript que añade tipado estático opcional y otras características avanzadas al lenguaje.
                 </AccordionContent>
             </AccordionItem>
             </Accordion>
@@ -136,7 +152,16 @@ export default function AboutUsPage() {
                     Kotlin
                 </div>
                 Kotlin es un lenguaje de programación moderno utilizado para el desarrollo de aplicaciones Android.
+
+                <hr className="my-4 border-t border-gray-200" />
+
+                <div className="flex items-center gap-2">
+                    <Icon icon={siAndroid} className="w-5 h-5" />
+                    Android
+                </div>
+                Android es un sistema operativo móvil desarrollado por Google utilizado en smartphones y tablets.
                 </AccordionContent>
+
             </AccordionItem>
             </Accordion>
             <Accordion type="single" collapsible>
@@ -150,6 +175,45 @@ export default function AboutUsPage() {
                     Node.js
                 </div>
                 Node.js es un entorno de ejecución de JavaScript en el servidor que utilizamos para construir APIs y servicios backend.
+
+                <hr className="my-4 border-t border-gray-200" />
+
+                <div className="flex items-center gap-2">
+                    <Icon icon={siSupabase} className="w-5 h-5" />
+                    Supabase
+                </div>
+                Supabase es una plataforma de desarrollo de aplicaciones que proporciona una base de datos y autenticación de usuarios.
+                </AccordionContent>
+            </AccordionItem>
+            </Accordion>
+
+            <Accordion type="single" collapsible>
+            <AccordionItem value="item-3">
+                <AccordionTrigger>
+                HERRAMIENTAS
+                </AccordionTrigger>
+                <AccordionContent>
+                <div className="flex items-center gap-2">
+                    <Icon icon={siGithub} className="w-5 h-5" />
+                    Github
+                </div>
+                GitHub es nuestra plataforma de control de versiones y colaboración en código. La usamos para gestionar el repositorio del proyecto y trabajar en equipo.
+
+                <hr className="my-4 border-t border-gray-200" />
+
+                <div className="flex items-center gap-2">
+                    <Icon icon={siFigma} className="w-5 h-5" />
+                    Figma
+                </div>
+                Figma es la herramienta de diseño que utilizamos para crear prototipos de la interfaz de usuario y colaborar en el diseño de la aplicación.
+
+                <hr className="my-4 border-t border-gray-200" />
+
+                <div className="flex items-center gap-2">
+                    <Icon icon={siNotion} className="w-5 h-5" />
+                    Notion
+                </div>
+                Notion es nuestro espacio centralizado para documentación, planificación de tareas y organización del equipo.
                 </AccordionContent>
             </AccordionItem>
             </Accordion>
