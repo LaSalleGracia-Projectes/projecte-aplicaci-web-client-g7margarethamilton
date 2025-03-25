@@ -113,7 +113,7 @@ export default function AboutUsPage() {
             <Accordion type="single" collapsible>
             <AccordionItem value="item-1">
                 <AccordionTrigger>
-                WEB
+                WEB 🖥️​
                 </AccordionTrigger>
                 <AccordionContent>
                 <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export default function AboutUsPage() {
             <Accordion type="single" collapsible>
             <AccordionItem value="item-2">
                 <AccordionTrigger>
-                APP
+                APP 📱
                 </AccordionTrigger>
                 <AccordionContent>
                 <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ export default function AboutUsPage() {
             <Accordion type="single" collapsible>
             <AccordionItem value="item-2">
                 <AccordionTrigger>
-                BACKEND
+                BACKEND 🤖
                 </AccordionTrigger>
                 <AccordionContent>
                 <div className="flex items-center gap-2">
@@ -190,7 +190,7 @@ export default function AboutUsPage() {
             <Accordion type="single" collapsible>
             <AccordionItem value="item-3">
                 <AccordionTrigger>
-                HERRAMIENTAS
+                HERRAMIENTAS 🛠️​
                 </AccordionTrigger>
                 <AccordionContent>
                 <div className="flex items-center gap-2">
