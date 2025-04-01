@@ -185,6 +185,64 @@ export default function AboutUsPage() {
           >
             Carlos Ayuso
           </MotionH2>
+          <MotionP
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="text-lg text-muted-foreground"
+          >
+            Programador FrontEnd de la aplicación movil. Se encarga de la
+            parte visual de la aplicación, así como de la experiencia del usuario.
+          </MotionP>
+          <MotionH2
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-2xl font-bold mb-6"
+          >
+            Jaime Higueras
+          </MotionH2>
+          <MotionP
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="text-lg text-muted-foreground"
+          >
+            Programador FrontEnd de la aplicación web. Se encarga de la parte
+            visual de la web, así como de la que hay en pantalla.
+          </MotionP>
+          <MotionH2
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-2xl font-bold mb-6"
+          >
+            Jaume Gandara
+          </MotionH2>
+          <MotionP
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="text-lg text-muted-foreground"
+          >
+            Programador fullstack, que se ha estado encargando del backend y parte visual de la aplicacion mobil.
+          </MotionP>
+          <MotionH2
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-2xl font-bold mb-6"
+          >
+            Nahomy Argueta
+          </MotionH2>
+          <MotionP
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="text-lg text-muted-foreground"
+          >
+            Programadora que se encarga de la parte visual de la aplicación web y parte de backend para poder garantizar la mejor experiencia al usuario.
+          </MotionP>
         </div>
       </div>
 
