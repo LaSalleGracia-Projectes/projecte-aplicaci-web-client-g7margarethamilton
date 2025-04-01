@@ -2,6 +2,8 @@
 
 // Cargar componentes de Framer Motion solo en el cliente
 import Header from "@/components/ui/header";
+import TeamSlider from "@/components/TeamSlider";
+import { teamMembers } from "@/data/team";
 import dynamic from "next/dynamic";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { siNextdotjs, siKotlin, siNodedotjs, siGithub, siFigma, siNotion, siSupabase, siAndroid, siReact, siTypescript, } from "simple-icons/icons";
@@ -165,19 +167,23 @@ export default function AboutUsPage() {
 
         {/* Columna derecha: Slider de fotos y equipo */}
         <div className="w-full md:w-1/2 space-y-8">
-          <div className="bg-gray-100 rounded-lg p-8">
-            <p className="text-center text-muted-foreground">
-              Slider de fotos (próximamente, crear componente de slider)
-            </p>
+          <div className="bg-none-0 rounded-lg p-0">
+          <section className="my-16">
+          <h2 className="text-3xl font-bold text-center mb-12">Team Flow2Day! ✨</h2>
+          <TeamSlider 
+            members={teamMembers}
+            autoPlay={true}
+            interval={4000}
+          />
+        </section>
           </div>
-
           <MotionH2
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-2xl font-bold mb-6"
           >
-            Team Flow2Day! ✨
+            Carlos Ayuso
           </MotionH2>
         </div>
       </div>
