@@ -4,24 +4,8 @@
 import Header from "@/components/ui/header";
 import dynamic from "next/dynamic";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { siNextdotjs, siKotlin, siNodedotjs, siGithub, siFigma, 
-        siNotion, siSupabase, siAndroid, siReact, siTypescript, } from "simple-icons/icons";
+import { siNextdotjs, siKotlin, siNodedotjs, siGithub, siFigma, siNotion, siSupabase, siAndroid, siReact, siTypescript, } from "simple-icons/icons";
 import technologiesData from "@/data/technologies.json";
-import { useState, useEffect } from "react";
-import Image from "next/image";
-
-const teamMembers = [
-  {
-    name: "Carlos Ayuso",
-    role: "Mobile Developer",
-    image: "/team/member1.jpg", 
-  },
-  {
-    name: "Jaime Higueras",
-    role: "Web Developer",
-    image: "/team/member2.jpg",
-  },
-];
 
 const MotionH1 = dynamic(
   () => import("framer-motion").then((mod) => mod.motion.h1),
@@ -47,22 +31,7 @@ interface TechnologySection {
   items: TechnologyItem[];
 }
 
-// interface TechnologiesData {
-//   sections: TechnologySection[];
-// }
-
-const iconMap = {
-  siNextdotjs,
-  siKotlin,
-  siNodedotjs,
-  siGithub,
-  siFigma,
-  siNotion,
-  siSupabase,
-  siAndroid,
-  siReact,
-  siTypescript,
-};
+const iconMap = { siNextdotjs, siKotlin, siNodedotjs, siGithub, siFigma, siNotion, siSupabase, siAndroid, siReact, siTypescript };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Icon = ({ icon, className }: { icon: any; className?: string }) => (
