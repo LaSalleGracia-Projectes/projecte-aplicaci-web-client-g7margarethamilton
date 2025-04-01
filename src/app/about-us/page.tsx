@@ -141,7 +141,7 @@ export default function AboutUsPage() {
                   <AccordionContent>
                     {section.items.map(
                       (tech: TechnologyItem, techIndex: number) => {
-                        const IconComponent = iconMap[tech.icon];
+                        const IconComponent = iconMap[tech.icon as keyof typeof iconMap];
                         return (
                           <div key={`tech-${sectionIndex}-${techIndex}`}>
                             <div className="flex items-center gap-2 py-2">
