@@ -2,6 +2,9 @@
 
 import { motion } from "framer-motion";
 import Header from "@/components/ui/header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 
 export default function ContactPage() {
@@ -54,15 +57,41 @@ export default function ContactPage() {
 
         {/* Columna derecha: Formulario de contacto */}
         <div className="w-full md:w-1/2">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.8 }}
-                className="bg-card p-8 rounded-lg shadow-md"
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="bg-card p-8 rounded-lg shadow-md"
         >
+            <h2 className="text-2xl font-bold mb-6">Escribe tu email y envíanos un mensaje</h2>
+            
+            <form className="space-y-6">
+                <div className="space-y-2">
+                    <label htmlFor="email" className="block font-medium">Email</label>
+                <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    required
+                />
+                </div>
+            
+                <div className="space-y-2">
+                    <label htmlFor="message" className="block font-medium">Mensaje</label>
+                    <Textarea
+                    id="message"
+                    rows={5}
+                    placeholder="Describe tu consulta o sugerencia..."
+                    required
+                    />
+                </div>
+                <Button type="submit" className="w-full">
+                    Enviar mensaje
+                </Button>
+                </form>
             </motion.div>
+            </div>
         </div>
-    </div>
 
     <footer className="bg-secondary py-8 text-center">
         <p className="text-sm text-muted-foreground">
