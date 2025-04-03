@@ -20,7 +20,7 @@ export default function Header() {
     <header className="bg-background/80 backdrop-blur-sm shadow-sm">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="font-bold text-xl">
-          Flow2Day
+          Flow2Day!
         </Link>
         <NavigationMenu>
           <NavigationMenuList className="hidden md:flex gap-6">
