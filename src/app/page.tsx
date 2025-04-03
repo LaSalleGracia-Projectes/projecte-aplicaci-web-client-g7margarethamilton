@@ -1,93 +1,86 @@
 "use client";
-import { useState, useEffect } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/ui/header";
+import Image from "next/image";
 
 export default function Homepage() {
-  const { scrollYProgress } = useScroll(); // ✅ Hook siempre en el mismo orden
-  const parallaxY = useTransform(scrollYProgress, [0, 1], [0, -300]);
-
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  // 🔄 Redirección si el usuario está autenticado
   useEffect(() => {
     if (!loading && user) {
       router.replace("/dashboard");
     }
   }, [user, loading, router]);
 
-  // 🔽 Manejo de scroll para ocultar el header
-  const [hidden, setHidden] = useState(false);
-  useEffect(() => {
-    const handleScroll = () => setHidden(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen flex flex-col items-center bg-background text-foreground">
+      {/* Header minimalista */}
       <motion.div 
-        className="fixed top-0 w-full z-50" 
-        animate={{ y: hidden ? -100 : 0 }} 
+        className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-white/60 border-b border-border"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <Header />
       </motion.div>
 
-      <main className="container mx-auto px-4">
-        <section className="h-screen flex flex-col justify-center items-center text-center">
+      {/* Sección Hero con Ilustración alineada */}
+      <section className="w-full flex flex-col md:flex-row items-center justify-center text-center md:text-left px-6 py-24 gap-10 max-w-6xl mx-auto">
+        <div className="flex flex-col items-center md:items-start md:w-1/2 space-y-6">
           <motion.h1 
-            className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6"
+            className="text-5xl font-bold"
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
           >
-            Tu organizador diario
+            Organiza tu vida con Flow2Day
           </motion.h1>
-          <motion.p
-            className="text-lg md:text-xl mb-8 max-w-2xl"
+          <motion.p 
+            className="text-lg max-w-md text-muted-foreground"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
           >
-            Simplifica tu día, maximiza tu productividad. Flow2Day te ayuda a organizar tus tareas y alcanzar tus metas.
+            Planifica tus tareas, gestiona tus proyectos y mantente productivo sin esfuerzo.
           </motion.p>
-          <Button size="lg">Explorar</Button>
-        </section>
+          <Button size="lg">Empieza ahora</Button>
+        </div>
+        <div className="md:w-1/2 flex justify-center">
+          <Image src="/study.svg" alt="Ilustración productividad" width={500} height={500} priority />
+        </div>
+      </section>
 
-        <section className="py-16 relative">
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-b from-background to-secondary/50"
-            style={{ y: parallaxY }}
-          />
-          <div className="relative z-10 max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Características principales</h2>
-            <ul className="grid md:grid-cols-2 gap-8">
-              {["Planificación diaria", "Seguimiento de objetivos", "Recordatorios inteligentes", "Análisis de productividad"].map((feature, index) => (
-                <motion.li 
-                  key={index}
-                  className="bg-card p-6 rounded-lg shadow-md"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.2 }}
-                >
-                  <h3 className="text-xl font-semibold mb-2">{feature}</h3>
-                  <p className="text-muted-foreground">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-                </motion.li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      </main>
+      {/* Sección Características */}
+      <section className="py-16 w-full max-w-4xl text-center">
+        <h2 className="text-3xl font-bold mb-6">¿Qué puedes hacer con Flow2Day?</h2>
+        <div className="grid md:grid-cols-2 gap-8">
+          {[
+            { title: "📅 Calendario Inteligente", desc: "Organiza tus eventos y compromisos de forma sencilla. Programa reuniones, recordatorios y fechas importantes sin esfuerzo." },
+            { title: "✅ Agenda de Tareas", desc: "Crea listas de tareas diarias y mantén el control de lo que tienes por hacer. Marca tareas completadas y sigue tu progreso." },
+            { title: "📊 Dashboard de Productividad", desc: "Visualiza tu rendimiento diario con estadísticas claras. Analiza cómo gestionas tu tiempo y mejora tu flujo de trabajo." },
+            { title: "👀 Seguimiento del Progreso", desc: "Mantén una vista general de tus avances con gráficos y métricas. Descubre patrones y optimiza tu productividad." }
+          ].map((feature, index) => (
+            <motion.div 
+              key={index} 
+              className="bg-card p-6 rounded-lg shadow-md"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.2 }}
+            >
+              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+              <p className="text-muted-foreground">{feature.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
 
-      <footer className="bg-secondary py-8 text-center">
-        <p className="text-sm text-muted-foreground">
-          Hecho con ❤️ y Next.js | © {new Date().getFullYear()} Flow2Day
-        </p>
+      <footer className="bg-secondary py-8 text-center w-full">
+        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Flow2Day - Hecho con ❤️ y Next.js</p>
       </footer>
     </div>
   );
