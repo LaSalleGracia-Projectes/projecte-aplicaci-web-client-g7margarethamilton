@@ -36,7 +36,8 @@ export default function ContactPage() {
 
             <div className="space-y-4">
                 <div>
-                    <h3 className="font-medium">Email</h3>
+                    <h3 className="font-medium">Email</h3> <br />
+                    <p className="text-muted-foreground">Cualquier correo de contacto que tengas y que uses normalmente:</p> <br />
                     <p className="text-muted-foreground">contacto@flow2day.com</p>
                 </div>
                 
