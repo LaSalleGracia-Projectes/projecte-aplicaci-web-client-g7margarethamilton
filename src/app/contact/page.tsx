@@ -1,54 +1,73 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 import Header from "@/components/ui/header";
+
 
 export default function ContactPage() {
     return (
-        <div className="min-h-screen">
-            <Header />
-        
-        <main className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto">
-            <h1 className="text-3xl md:text-4xl font-bold mb-6">Contacto</h1>
-        
-            <form className="space-y-6">
+    <div className="flex flex-col min-h-screen">
+        <Header />
+    
+        <div className="flex-1 container mx-auto px-4 py-12 flex flex-col md:flex-row gap-8">
+            {/* Columna izquierda: Información de contacto */}
+        <div className="w-full md:w-1/2 space-y-8">
+            <motion.h1
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="text-4xl font-bold mb-6"
+        >
+            Contacta con nosotros
+            </motion.h1>
+
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                className="space-y-6"
+        >
             <div>
-                <label htmlFor="name" className="block mb-2">Nombre</label>
-                <input
-                    type="text"
-                    id="name"
-                    className="w-full p-3 border rounded-lg"
-                    placeholder="Tu nombre"
-            />
+                <h2 className="text-2xl font-semibold mb-4">Información de contacto</h2>
+                <p className="text-muted-foreground">
+                    Estamos aquí para ayudarte con cualquier duda que tengas. Ponte en contacto con nuestro equipo a través de los siguientes medios:
+                </p>
             </div>
-            
-            <div>
-                <label htmlFor="email" className="block mb-2">Email</label>
-                <input
-                type="email"
-                id="email"
-                className="w-full p-3 border rounded-lg"
-                placeholder="tu@email.com"
-            />
+
+            <div className="space-y-4">
+                <div>
+                    <h3 className="font-medium">Email</h3>
+                    <p className="text-muted-foreground">contacto@flow2day.com</p>
+                </div>
+                
             </div>
-            
-            <div>
-                <label htmlFor="message" className="block mb-2">Mensaje</label>
-                <textarea
-                id="message"
-                rows={5}
-                className="w-full p-3 border rounded-lg"
-                placeholder="Tu mensaje..."
-            ></textarea>
+
+            <div className="pt-4">
+                <h2 className="text-2xl font-semibold mb-4">Horario de atención</h2>
+                <p className="text-muted-foreground">
+                    Lunes a Viernes: 9:00 - 18:00<br />
+                </p>
             </div>
-            
-            <Button type="submit" className="w-full md:w-auto">
-                Enviar mensaje
-            </Button>
-            </form>
+        </motion.div>
         </div>
-        </main>
+
+        {/* Columna derecha: Formulario de contacto */}
+        <div className="w-full md:w-1/2">
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.8 }}
+                className="bg-card p-8 rounded-lg shadow-md"
+        >
+            </motion.div>
+        </div>
+    </div>
+
+    <footer className="bg-secondary py-8 text-center">
+        <p className="text-sm text-muted-foreground">
+            Hecho con ❤️ y Next.js | © {new Date().getFullYear()} Flow2Day
+        </p>
+    </footer>
     </div>
     );
 }
