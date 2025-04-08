@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Importar useRouter
 import { Menu, User, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/app/providers";
 import { Card } from "@/components/ui/card";
@@ -12,13 +11,7 @@ const menuItems = [
 
 export default function Sidebar() {
   const { logOut } = useAuth();
-  const router = useRouter(); // Inicializar useRouter
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleLogout = async () => {
-    await logOut(); // Llama a la función logOut
-    router.push("/"); // Redirigir a la página principal
-  };
 
   return (
     <div className="fixed top-4 left-4 z-50">
@@ -43,7 +36,7 @@ export default function Sidebar() {
             </Link>
           ))}
           <button
-            onClick={handleLogout} // Usar la función handleLogout
+            onClick={logOut}
             className="flex items-center gap-2 text-red-500 p-2 rounded hover:bg-gray-200"
           >
             <LogOut size={24} />
