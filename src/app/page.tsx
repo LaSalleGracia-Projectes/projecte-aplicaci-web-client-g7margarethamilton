@@ -11,11 +11,7 @@ export default function Homepage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace("/dashboard");
-    }
-  }, [user, loading, router]);
+  useEffect(() => {}, [user, loading, router]);
 
   return (
     <div className="relative min-h-screen flex flex-col items-center bg-background text-foreground">
