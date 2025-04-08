@@ -27,6 +27,7 @@ export default function Header() {
             {[
               { href: "/about-us", label: "About us" },
               { href: "/contact", label: "Contact" },
+              { href: "/dashboard", label: "Dashboard" },
             ].map((item) => (
               <NavigationMenuItem key={item.href}>
                 <Link href={item.href} legacyBehavior passHref>

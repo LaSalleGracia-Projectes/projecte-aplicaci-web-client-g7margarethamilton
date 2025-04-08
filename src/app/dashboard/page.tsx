@@ -9,9 +9,6 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
   }, [user, loading, router]);
 
   if (loading) return <p>Cargando...</p>;
