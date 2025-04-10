@@ -7,11 +7,13 @@ import { useRouter } from "next/navigation";
 type User = {
   email: string;
   nickname: string;
+  is_admin?: boolean;
 };
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
+  is_admin: boolean;
   login: (email: string, password: string) => Promise<void>;
   logOut: () => void;
 };
@@ -36,6 +38,7 @@ api.interceptors.request.use((config) => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [is_admin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   // ✅ 1️⃣ Cargar usuario si hay un token
@@ -50,6 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const { data } = await api.get("/profile"); // 👈 Reemplaza con tu endpoint de perfil
         setUser(data);
+        setIsAdmin(data.is_admin || false); // 👈 Verifica si el usuario es admin
       } catch (error) {
         console.error("Token inválido o expirado:", error);
         logOut();
@@ -67,7 +71,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data } = await api.post("/login", { email, password });
       localStorage.setItem("token", data.token);
       setUser(data.user);
-      router.push("/dashboard"); // 👈 Redirigir al dashboard
+      setIsAdmin(data.user?.is_admin || false);
+      router.push(data.user?.is_admin ? "/admin" : "/dashboard") // 👈 Redirigir al dashboard
     } catch (error) {
       console.error("Error en login:", error);
       throw error;
@@ -82,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logOut }}>
+    <AuthContext.Provider value={{ user, loading, is_admin, login, logOut }}>
       {children}
     </AuthContext.Provider>
   );
