@@ -3,11 +3,15 @@
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import supabase from "@/lib/supabase";
 
 type User = {
+  id: string;
   email: string;
   nickname: string;
-  is_admin?: boolean;
+  avatar_url: string;
+  is_admin: boolean;
+  is_banned: boolean;
 };
 
 type AuthContextType = {
@@ -15,7 +19,8 @@ type AuthContextType = {
   loading: boolean;
   is_admin: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logOut: () => void;
+  logOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
