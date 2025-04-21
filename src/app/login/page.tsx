@@ -30,7 +30,7 @@ const LoginPage = () => {
 
     try {
       await login(email, password)
-      router.push("/")
+      router.push("/dashboard")
     } catch (error) {
       console.error("Error en inicio de sesión:", error)
       setError("Credenciales inválidas. Por favor, verifica tu email y contraseña.")
@@ -141,4 +141,3 @@ const LoginPage = () => {
 }
 
 export default LoginPage
-
