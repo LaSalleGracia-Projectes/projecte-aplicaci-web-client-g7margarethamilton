@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // 🔹 Creamos una instancia de axios que actualiza automáticamente el token
 const api = axios.create({
-  baseURL: "http://localhost:3000/api/v1/auth/web",
+  baseURL: "http://localhost:3000/api/v1",
   headers: { "Content-Type": "application/json" },
 });
 
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       try {
-        const { data } = await api.get("/profile"); // 👈 Reemplaza con tu endpoint de perfil
+        const { data } = await api.get("/user"); // 👈 Reemplaza con tu endpoint de perfil
         setUser(data);
       } catch (error) {
         console.error("Token inválido o expirado:", error);
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // ✅ 2️⃣ Función de login
   const login = async (email: string, password: string) => {
     try {
-      const { data } = await api.post("/login", { email, password });
+      const { data } = await api.post("/auth/web/login", { email, password });
       localStorage.setItem("token", data.token);
       setUser(data.user);
       router.push("/dashboard"); // 👈 Redirigir al dashboard
@@ -95,3 +95,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export { api };

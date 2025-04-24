@@ -1,26 +1,22 @@
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/providers";
-import Blocks from "./blocks";
+// import { Calendar } from "@/components/Calendar";
+import { Card } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function Dashboard() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
-
-  if (loading) return <p>Cargando...</p>;
-  if (!user) return null; // Por seguridad, aunque debería redirigir
-
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4 flex justify-end">Dashboard</h1>
-      <Blocks />
+    <div className="relative flex h-screen max-h-screen w-full flex-col gap-4 px-4 pt-4 items-center justify-center">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p>Welcome to the dashboard!</p>
+
+    <Link href="/calendar">
+    <Card className="w-full max-w-md p-6 text-center">
+        CALENDAR 🗓️
+      </Card>
+    </Link>
+      
+      <Card className="w-full max-w-md p-6 text-center">
+        SCHEDULE ⏰
+      </Card>
     </div>
   );
 }
