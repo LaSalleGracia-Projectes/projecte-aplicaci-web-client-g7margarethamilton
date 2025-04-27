@@ -24,7 +24,7 @@ import supabase from "@/lib/supabase";
 export default function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth(); // Obtiene el usuario autenticado
+  const { user } = useAuth();
 
   return (
     <header className="bg-background/80 backdrop-blur-sm shadow-sm">
@@ -41,17 +41,16 @@ export default function Header() {
               { href: "/admin", label: "Panel" },
             ].map((item) => (
               <NavigationMenuItem key={item.href}>
-                <Link href={item.href} legacyBehavior passHref>
-                  <NavigationMenuLink
-                    className={
-                      pathname === item.href
-                        ? "text-primary font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    }
-                  >
-                    {item.label}
-                  </NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink
+                  asChild
+                  className={
+                    pathname === item.href
+                      ? "text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                >
+                  <Link href={item.href}>{item.label}</Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
             ))}
           </NavigationMenuList>
@@ -68,50 +67,48 @@ export default function Header() {
           </Button>
 
           <div className="flex items-center gap-4">
-          {user?.is_admin && (
-            <Link href="/admin">
-              <Button variant="ghost">Panel Admin</Button>
-            </Link>
-          )}
-          {user ? (
-            // Si está autenticado, muestra el ícono de perfil con un menú
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="cursor-pointer">
-                  <AvatarImage src={user.avatar_url || ""} alt="User avatar" />
-                  <AvatarFallback>
-                    {user.nickname?.charAt(0).toUpperCase() || (
-                      <UserIcon className="w-5 h-5" />
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href="/profile">Perfil</Link>
-                </DropdownMenuItem>
-                {user.is_admin && (
+            {user?.is_admin && (
+              <Link href="/admin">
+                <Button variant="ghost">Panel Admin</Button>
+              </Link>
+            )}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="cursor-pointer">
+                    <AvatarImage src={user.avatar_url || ""} alt="User avatar" />
+                    <AvatarFallback>
+                      {user.nickname?.charAt(0).toUpperCase() || (
+                        <UserIcon className="w-5 h-5" />
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href="/admin">Admin</Link>
+                    <Link href="/profile">Perfil</Link>
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => supabase.auth.signOut()}>
-                  Cerrar sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            // Si NO está autenticado, muestra los botones de login y registro
-            <>
-              <Link href="/login">
-                <Button variant="ghost">Log in</Button>
-              </Link>
-              <Link href="/register">
-                <Button>Sign up</Button>
-              </Link>
-            </>
-          )}
-        </div>
+                  {user.is_admin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">Admin</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => supabase.auth.signOut()}>
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost">Log in</Button>
+                </Link>
+                <Link href="/register">
+                  <Button>Sign up</Button>
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

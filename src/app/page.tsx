@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -11,12 +12,18 @@ export default function Homepage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {}, [user, loading, router]);
+  useEffect(() => {
+    if (!loading && user?.is_admin) {
+      router.push("/admin");
+    }
+  }, [user, loading, router]);
+
+  if (loading) return <div>Cargando...</div>;
 
   return (
     <div className="relative min-h-screen flex flex-col items-center bg-background text-foreground">
       {/* Header minimalista */}
-      <motion.div 
+      <motion.div
         className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-white/60 border-b border-border"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -28,7 +35,7 @@ export default function Homepage() {
       {/* Sección Hero con Ilustración alineada */}
       <section className="w-full flex flex-col md:flex-row items-center justify-center text-center md:text-left px-6 py-24 gap-10 max-w-6xl mx-auto">
         <div className="flex flex-col items-center md:items-start md:w-1/2 space-y-6">
-          <motion.h1 
+          <motion.h1
             className="text-5xl font-bold"
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -36,7 +43,7 @@ export default function Homepage() {
           >
             Organiza tu vida con Flow2Day
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="text-lg max-w-md text-muted-foreground"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -61,8 +68,8 @@ export default function Homepage() {
             { title: "📊 Dashboard de Productividad", desc: "Visualiza tu rendimiento diario con estadísticas claras. Analiza cómo gestionas tu tiempo y mejora tu flujo de trabajo." },
             { title: "👀 Seguimiento del Progreso", desc: "Mantén una vista general de tus avances con gráficos y métricas. Descubre patrones y optimiza tu productividad." }
           ].map((feature, index) => (
-            <motion.div 
-              key={index} 
+            <motion.div
+              key={index}
               className="bg-card p-6 rounded-lg shadow-md"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
