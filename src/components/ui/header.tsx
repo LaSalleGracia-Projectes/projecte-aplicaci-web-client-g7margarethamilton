@@ -76,7 +76,10 @@ export default function Header() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Avatar className="cursor-pointer">
-                    <AvatarImage src={user.avatar_url || ""} alt="User avatar" />
+                  <AvatarImage
+                    src={`${user.avatar_url}${user.avatar_url.includes("?") ? "&" : "?"}cache=${Date.now()}`}
+                    alt="User avatar"
+                    />
                     <AvatarFallback>
                       {user.nickname?.charAt(0).toUpperCase() || (
                         <UserIcon className="w-5 h-5" />
@@ -93,7 +96,40 @@ export default function Header() {
                       <Link href="/admin">Admin</Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={() => supabase.auth.signOut()}>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      // Opcional: Llamada al backend para limpiar el token
+                      const email = user?.email;
+                      const token = localStorage.getItem("tokenWeb");
+
+                      if (email && token) {
+                        try {
+                          await fetch(
+                            "http://localhost:3000/api/v1/auth/web/logout",
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                email,
+                                password: "dummy_password_for_logout",
+                              }),
+                            }
+                          );
+                        } catch (err) {
+                          console.warn(
+                            "No se pudo limpiar el token en el servidor"
+                          );
+                        }
+                      }
+
+                      // Elimina los datos del usuario y redirige
+                      localStorage.removeItem("tokenWeb");
+                      localStorage.removeItem("user");
+                      window.location.href = "/login";
+                    }}
+                  >
                     Cerrar sesión
                   </DropdownMenuItem>
                 </DropdownMenuContent>
