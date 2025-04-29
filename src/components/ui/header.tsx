@@ -127,7 +127,7 @@ export default function Header() {
                       // Elimina los datos del usuario y redirige
                       localStorage.removeItem("tokenWeb");
                       localStorage.removeItem("user");
-                      window.location.href = "/login";
+                      window.location.href = "/";
                     }}
                   >
                     Cerrar sesión
