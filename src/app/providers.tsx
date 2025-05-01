@@ -34,16 +34,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("tokenWeb");
-
+  
     if (storedUser && storedToken) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Error parsing stored user", e);
-        clearSession();
-      }
+      setUser(JSON.parse(storedUser));
+    } else {
+      setUser(null); // En caso de que no haya usuario o token en el almacenamiento local
     }
-
+  
     setLoading(false);
   }, []);
 
@@ -67,6 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       setUser(userData);
       router.push("/");
+      
     } catch (error: any) {
       console.error("Login error:", error.response?.data || error.message);
       throw new Error("Credenciales incorrectas o servidor no disponible");

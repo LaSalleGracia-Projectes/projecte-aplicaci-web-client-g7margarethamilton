@@ -49,7 +49,8 @@
 
       localStorage.setItem("tokenWeb", data.tokenWeb);
       localStorage.setItem("user", JSON.stringify(data.user));
-      router.push("/");
+      window.location.href = "/"; 
+      
     } catch (err) {
       console.error("Error:", err.message);
       setError("Credenciales inválidas o servidor no disponible");
