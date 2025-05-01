@@ -12,7 +12,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useAuth } from "@/app/providers";
-import supabase from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -38,29 +37,50 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!loading && (!user || !user.is_admin)) {
-      router.push("/admin");
-      return;
+      router.push("/");
     }
-
+  
     const fetchUsers = async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("email, nickname, is_admin, is_banned, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) {
-        setError(error.message);
-      } else {
-        setUsers(data || []);
+      try {
+        const token = localStorage.getItem("tokenWeb");
+  
+        const res = await fetch("http://localhost:3000/api/v1/user", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        if (res.ok) {
+          const data = await res.json();
+          setUsers(data);
+        }
+      } catch (err) {
+        setError("No se pudieron cargar los usuarios");
+        console.error("Error al obtener usuarios:", err);
+      } finally {
+        setFetchLoading(false);
       }
-      setFetchLoading(false);
     };
-
+  
     if (user?.is_admin) {
       fetchUsers();
     }
   }, [user, loading, router]);
+
+  if (!loading && (!user || !user.is_admin)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h2 className="text-xl font-bold text-red-500">Acceso denegado</h2>
+        <p>No tienes permisos para acceder al panel de administración.</p>
+        <button
+          onClick={() => router.push("/")}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Volver al inicio
+        </button>
+      </div>
+    );
+  }
 
   const validatePassword = (password: string) => {
     const regex = /^(?=(.*\d){3,})(?=(.*[a-z]){3,})(?=(.*[A-Z]){3,}).{9,}$/;
@@ -69,7 +89,6 @@ export default function AdminPage() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
     setError("");
 
     if (!validatePassword(newUser.password)) {
@@ -78,49 +97,37 @@ export default function AdminPage() {
     }
 
     try {
-      // Registrar en Supabase Auth (API Route)
-      const supabaseResponse = await axios.post("/api/auth/register", newUser, {
-        timeout: 5000,
-      });
-
-      if (supabaseResponse.status !== 200) {
-        throw new Error(supabaseResponse.data.message || "Error al registrar en Supabase Auth");
-      }
-
-      // En handleCreateUser, después de la solicitud
       const newUserWithUserId = { ...newUser, userId: newUser.email };
-      const apiResponse = await axios.post("http://localhost:3000/api/v1/auth/register", newUserWithUserId, {
-        timeout: 5000,
-      });
+      const apiResponse = await axios.post("http://localhost:3000/api/v1/auth/register", newUserWithUserId);
 
-setUsers([
-  {
-    email: newUser.email,
-    nickname: newUser.nickname,
-    is_admin: false,
-    is_banned: false,
-    created_at: new Date().toISOString(),
-    avatar_url: apiResponse.data.avatar_url || "", // Usar avatar_url si la API lo devuelve
-  },
-  ...users,
-]);
+      setUsers([
+        {
+          email: newUser.email,
+          nickname: newUser.nickname,
+          is_admin: false,
+          is_banned: false,
+          created_at: new Date().toISOString(),
+          avatar_url: apiResponse.data.avatar_url || "",
+        },
+        ...users,
+      ]);
       setNewUser({ email: "", password: "", nickname: "" });
       setDialogOpen(false);
     } catch (err: any) {
       let errorMessage = "Error al crear usuario";
-      if (err.code === "ECONNREFUSED" || err.code === "ERR_NETWORK") {
-        errorMessage = "No se pudo conectar con el servidor. Verifica que la API esté corriendo en http://localhost:3000.";
-      } else if (err.response) {
-        errorMessage = err.response.data.message || `Error del servidor: ${err.response.status}`;
+      if (err.code === "ECONNREFUSED") {
+        errorMessage = "No se pudo conectar con el servidor.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
       }
       setError(errorMessage);
-      console.error("Error completo:", err);
+      console.error("Error:", err);
     }
   };
 
-  if (loading || fetchLoading) return <div>Cargando...</div>;
-  if (!user?.is_admin) return null;
-
+  if (loading || fetchLoading) {
+    return <div>Cargando...</div>;
+  }
   return (
     <>
       <Header />
@@ -154,7 +161,6 @@ setUsers([
                       setNewUser({ ...newUser, email: e.target.value })
                     }
                     required
-                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -167,7 +173,6 @@ setUsers([
                       setNewUser({ ...newUser, password: e.target.value })
                     }
                     required
-                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -180,12 +185,9 @@ setUsers([
                       setNewUser({ ...newUser, nickname: e.target.value })
                     }
                     required
-                    disabled={loading}
                   />
                 </div>
-                <Button type="submit" disabled={loading}>
-                  Crear
-                </Button>
+                <Button type="submit">Crear</Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -193,7 +195,7 @@ setUsers([
 
         <Alert variant="default" className="mb-4">
           <AlertDescription>
-            Nota: Las operaciones de edición y eliminación de usuarios deben realizarse manualmente en la base de datos debido a restricciones de seguridad.
+            Nota: Las operaciones de edición y eliminación deben realizarse manualmente en la base de datos debido a restricciones de seguridad.
           </AlertDescription>
         </Alert>
 
@@ -212,13 +214,9 @@ setUsers([
               <TableRow key={user.email}>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.nickname}</TableCell>
-                <TableCell>
-                  {user.is_admin ? "Administrador" : "Usuario"}
-                </TableCell>
+                <TableCell>{user.is_admin ? "Administrador" : "Usuario"}</TableCell>
                 <TableCell>{user.is_banned ? "Sí" : "No"}</TableCell>
-                <TableCell>
-                  {new Date(user.created_at).toLocaleDateString()}
-                </TableCell>
+                <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
               </TableRow>
             ))}
           </TableBody>

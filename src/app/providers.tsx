@@ -34,13 +34,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("tokenWeb");
-  
+
     if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      setUser(null); // En caso de que no haya usuario o token en el almacenamiento local
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (e) {
+        console.error("Error parsing stored user", e);
+        clearSession();
+      }
     }
-  
+
     setLoading(false);
   }, []);
 
@@ -51,23 +55,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email,
         password,
       });
-
+  
       const { user: userData, tokenWeb } = response.data;
-
+  
       if (!tokenWeb) {
         throw new Error("No se recibió un token válido");
       }
-
-      // Guardamos en localStorage
+  
       localStorage.setItem("tokenWeb", tokenWeb);
       localStorage.setItem("user", JSON.stringify(userData));
-
-      setUser(userData);
-      router.push("/");
-      
+  
+      setUser({
+        ...userData,
+        is_admin: !!userData.is_admin, // Garantiza que sea booleano
+      });
+  
+      window.location.reload();
     } catch (error: any) {
       console.error("Login error:", error.response?.data || error.message);
-      throw new Error("Credenciales incorrectas o servidor no disponible");
+      throw new Error("Credenciales inválidas o servidor no disponible");
     }
   };
 
