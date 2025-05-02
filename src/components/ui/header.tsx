@@ -27,66 +27,78 @@ export default function Header() {
   const { user } = useAuth();
 
   return (
-    <header className="bg-background/80 backdrop-blur-sm shadow-sm">
-      <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="font-bold text-xl">
+    <header className="bg-background/80 backdrop-blur-sm shadow-sm w-full">
+      <div className="container mx-auto flex h-16 items-center justify-between px-6 gap-8">
+        {/* Logo a la izquierda */}
+        <Link href="/" className="font-bold text-xl shrink-0">
           Flow2Day!
         </Link>
 
-        <NavigationMenu>
-          <NavigationMenuList className="hidden md:flex gap-6">
-            {[
-              { href: "/about-us", label: "About us" },
-              { href: "/contact", label: "Contact" },
-            ].map((item) => (
-              <NavigationMenuItem key={item.href}>
-                <NavigationMenuLink
-                  asChild
-                  className={
-                    pathname === item.href
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground"
-                  }
-                >
-                  <Link href={item.href}>{item.label}</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            ))}
-          </NavigationMenuList>
-        </NavigationMenu>
+        {/* Navegación centrada */}
+        <div className="flex-1 flex justify-center">
+          <NavigationMenu>
+            <NavigationMenuList className="flex gap-8">
+              {[
+                { href: "/about-us", label: "About us" },
+                { href: "/contact", label: "Contact" },
+              ].map((item) => (
+                <NavigationMenuItem key={item.href}>
+                  <NavigationMenuLink
+                    asChild
+                    className={
+                      pathname === item.href
+                        ? "text-primary font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    }
+                  >
+                    <Link href={item.href}>{item.label}</Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              ))}
+            </NavigationMenuList>
+          </NavigationMenu>
+        </div>
 
-        <div className="flex items-center gap-4">
+        {/* Acciones a la derecha */}
+        <div className="flex items-center gap-3 shrink-0">
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
-            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            {theme === "dark" ? (
+              <SunIcon className="h-5 w-5" />
+            ) : (
+              <MoonIcon className="h-5 w-5" />
+            )}
             <span className="sr-only">Toggle theme</span>
           </Button>
 
-          <div className="flex items-center gap-4">
-            {user?.is_admin && (
-              <Link href="/admin">
-                <Button variant="ghost">Panel Admin</Button>
-              </Link>
-            )}
-            {user ? (
+          {user ? (
+            <div className="flex items-center gap-3">
+              {user.is_admin && (
+                <Link href="/admin">
+                  <Button variant="ghost" className="px-3 py-2">
+                    Panel Admin
+                  </Button>
+                </Link>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Avatar className="cursor-pointer">
-                  <AvatarImage
-                    src={`${user.avatar_url}${user.avatar_url.includes("?") ? "&" : "?"}cache=${Date.now()}`}
-                    alt="User avatar"
+                  <Avatar className="cursor-pointer h-9 w-9">
+                    <AvatarImage
+                      src={`${user.avatar_url}${user.avatar_url.includes("?") ? "&" : "?"}cache=${Date.now()}`}
+                      alt="User avatar"
                     />
                     <AvatarFallback>
                       {user.nickname?.charAt(0).toUpperCase() || (
-                        <UserIcon className="w-5 h-5" />
+                        <UserIcon className="h-5 w-5" />
                       )}
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Perfil</Link>
                   </DropdownMenuItem>
@@ -97,7 +109,6 @@ export default function Header() {
                   )}
                   <DropdownMenuItem
                     onClick={async () => {
-                      // Opcional: Llamada al backend para limpiar el token
                       const email = user?.email;
                       const token = localStorage.getItem("tokenWeb");
 
@@ -123,7 +134,6 @@ export default function Header() {
                         }
                       }
 
-                      // Elimina los datos del usuario y redirige
                       localStorage.removeItem("tokenWeb");
                       localStorage.removeItem("user");
                       window.location.href = "/";
@@ -133,17 +143,19 @@ export default function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost">Log in</Button>
-                </Link>
-                <Link href="/register">
-                  <Button>Sign up</Button>
-                </Link>
-              </>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link href="/login">
+                <Button variant="ghost" className="px-3 py-2">
+                  Log in
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button className="px-4 py-2">Sign up</Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </header>

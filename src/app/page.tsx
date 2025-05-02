@@ -14,7 +14,7 @@ export default function Homepage() {
 
   useEffect(() => {
     if (!loading && user?.is_admin) {
-      router.push("/admin");
+      router.push("/");
     }
   }, [user, loading, router]);
 

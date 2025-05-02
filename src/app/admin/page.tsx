@@ -1,8 +1,11 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/providers";
 import Header from "@/components/ui/header";
-import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+
+// Componentes de shadcn (no modificados)
 import {
   Table,
   TableHeader,
@@ -11,23 +14,21 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { useAuth } from "@/app/providers";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import axios from "axios";
 
 export default function AdminPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,58 +36,46 @@ export default function AdminPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
 
+  // Validar acceso al panel
   useEffect(() => {
-    if (!loading && (!user || !user.is_admin)) {
-      router.push("/");
+    if (!authLoading && (!user || !user.is_admin)) {
+      return router.push("/");
     }
-  
+
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("tokenWeb");
-  
+
         const res = await fetch("http://localhost:3000/api/v1/user", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-  
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data);
+
+        if (!res.ok) {
+          throw new Error("Error al obtener usuarios");
         }
-      } catch (err) {
+
+        const data = await res.json();
+        setUsers(data);
+      } catch (err: any) {
+        console.error("Error al cargar usuarios:", err.message);
         setError("No se pudieron cargar los usuarios");
-        console.error("Error al obtener usuarios:", err);
       } finally {
         setFetchLoading(false);
       }
     };
-  
-    if (user?.is_admin) {
-      fetchUsers();
-    }
-  }, [user, loading, router]);
 
-  if (!loading && (!user || !user.is_admin)) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h2 className="text-xl font-bold text-red-500">Acceso denegado</h2>
-        <p>No tienes permisos para acceder al panel de administración.</p>
-        <button
-          onClick={() => router.push("/")}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Volver al inicio
-        </button>
-      </div>
-    );
-  }
+    fetchUsers();
+  }, [user, authLoading]);
 
+  // Validación de contraseña
   const validatePassword = (password: string) => {
     const regex = /^(?=(.*\d){3,})(?=(.*[a-z]){3,})(?=(.*[A-Z]){3,}).{9,}$/;
     return regex.test(password);
   };
 
+  // Crear nuevo usuario
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -98,19 +87,33 @@ export default function AdminPage() {
 
     try {
       const newUserWithUserId = { ...newUser, userId: newUser.email };
-      const apiResponse = await axios.post("http://localhost:3000/api/v1/auth/register", newUserWithUserId);
+      const apiResponse = await fetch("http://localhost:3000/api/v1/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newUser),
+      });
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({ message: "Error desconocido" }));
+        throw new Error(errorData.message || "Error al crear usuario");
+      }
+
+      const userData = await apiResponse.json();
 
       setUsers([
         {
           email: newUser.email,
           nickname: newUser.nickname,
+          avatar_url: userData.avatar_url || "",
           is_admin: false,
           is_banned: false,
           created_at: new Date().toISOString(),
-          avatar_url: apiResponse.data.avatar_url || "",
         },
         ...users,
       ]);
+
       setNewUser({ email: "", password: "", nickname: "" });
       setDialogOpen(false);
     } catch (err: any) {
@@ -119,15 +122,178 @@ export default function AdminPage() {
         errorMessage = "No se pudo conectar con el servidor.";
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
       setError(errorMessage);
-      console.error("Error:", err);
+      console.error("Error completo:", err);
     }
   };
 
-  if (loading || fetchLoading) {
+  // Banear/desbanear usuario
+  const handleToggleBan = async (email: string, currentStatus: boolean) => {
+    try {
+      const token = localStorage.getItem("tokenWeb");
+
+      const userToUpdate = users.find((u) => u.email === email);
+
+      if (!userToUpdate) {
+        throw new Error("Usuario no encontrado");
+      }
+
+      const response = await fetch(`http://localhost:3000/api/v1/user/${email}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nickname: userToUpdate.nickname,
+          avatar_url: userToUpdate.avatar_url,
+          is_admin: userToUpdate.is_admin,
+          is_banned: !currentStatus,
+
+          // ✅ Enviar `userId` desde el frontend
+          userId: user?.email,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al actualizar estado de baneo");
+      }
+
+      const updatedUser = await response.json();
+      setUsers(
+        users.map((u) =>
+          u.email === email ? { ...u, is_banned: !currentStatus } : u
+        )
+      );
+    } catch (err: any) {
+      setError("No se pudo banear al usuario");
+      console.error("Error al banear:", err.message);
+    }
+  };
+
+  // Eliminar usuario
+  const handleDeleteUser = async (email: string) => {
+    try {
+      const token = localStorage.getItem("tokenWeb");
+
+      const response = await fetch(`http://localhost:3000/api/v1/user/${email}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          // ✅ Requerido por tu backend
+          userId: user?.email,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al eliminar usuario");
+      }
+
+      setUsers(users.filter((u) => u.email !== email));
+    } catch (err: any) {
+      setError("No se pudo eliminar el usuario");
+      console.error("Error al eliminar:", err.message);
+    }
+  };
+
+  // Editar usuario
+  const openEditModal = (u: any) => {
+    setEditingUser(u);
+    setNewNickname(u.nickname);
+    setNewIsAdmin(u.is_admin);
+    setNewIsBanned(u.is_banned);
+    setShowEditModal(true);
+  };
+
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [newNickname, setNewNickname] = useState("");
+  const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [newIsBanned, setNewIsBanned] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    setIsProcessing(true);
+    setError("");
+
+    try {
+      const token = localStorage.getItem("tokenWeb");
+
+      const response = await fetch(`http://localhost:3000/api/v1/user/${editingUser.email}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nickname: newNickname,
+          is_admin: newIsAdmin,
+          is_banned: newIsBanned,
+          userId: user?.email, // ✅ Enviar `userId` desde frontend
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al guardar los cambios");
+      }
+
+      refreshUsers();
+      setShowEditModal(false);
+    } catch (err: any) {
+      setError("No se pudieron guardar los cambios");
+      console.error("Error al guardar:", err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const refreshUsers = async () => {
+    try {
+      const token = localStorage.getItem("tokenWeb");
+
+      const res = await fetch("http://localhost:3000/api/v1/user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al recargar usuarios");
+      }
+
+      const data = await res.json();
+      setUsers(data);
+    } catch (err: any) {
+      setError("No se pudieron recargar los usuarios");
+      console.error("Error al recargar:", err.message);
+    }
+  };
+
+  // Renderizado condicional
+  if (authLoading || fetchLoading) {
     return <div>Cargando...</div>;
   }
+
+  if (!user?.is_admin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h2 className="text-xl font-bold text-red-500">Acceso denegado</h2>
+        <p>No tienes permisos para acceder al panel de administración.</p>
+        <button onClick={() => router.push("/")} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          Volver al inicio
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       <Header />
@@ -142,8 +308,7 @@ export default function AdminPage() {
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                Añadir Usuario
+                <span>Añadir Usuario</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -157,9 +322,7 @@ export default function AdminPage() {
                     id="email"
                     type="email"
                     value={newUser.email}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, email: e.target.value })
-                    }
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     required
                   />
                 </div>
@@ -169,9 +332,7 @@ export default function AdminPage() {
                     id="password"
                     type="password"
                     value={newUser.password}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, password: e.target.value })
-                    }
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                     required
                   />
                 </div>
@@ -181,23 +342,17 @@ export default function AdminPage() {
                     id="nickname"
                     type="text"
                     value={newUser.nickname}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, nickname: e.target.value })
-                    }
+                    onChange={(e) => setNewUser({ ...newUser, nickname: e.target.value })}
                     required
                   />
                 </div>
-                <Button type="submit">Crear</Button>
+                <Button type="submit" disabled={isProcessing}>
+                  Crear
+                </Button>
               </form>
             </DialogContent>
           </Dialog>
         </div>
-
-        <Alert variant="default" className="mb-4">
-          <AlertDescription>
-            Nota: Las operaciones de edición y eliminación deben realizarse manualmente en la base de datos debido a restricciones de seguridad.
-          </AlertDescription>
-        </Alert>
 
         <Table>
           <TableHeader>
@@ -207,20 +362,90 @@ export default function AdminPage() {
               <TableHead>Rol</TableHead>
               <TableHead>Baneado</TableHead>
               <TableHead>Creado</TableHead>
+              <TableHead>Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.email}>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.nickname}</TableCell>
-                <TableCell>{user.is_admin ? "Administrador" : "Usuario"}</TableCell>
-                <TableCell>{user.is_banned ? "Sí" : "No"}</TableCell>
-                <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+            {users.map((u) => (
+              <TableRow key={u.email}>
+                <TableCell>{u.email}</TableCell>
+                <TableCell>{u.nickname}</TableCell>
+                <TableCell>{u.is_admin ? "Administrador" : "Usuario"}</TableCell>
+                <TableCell>{u.is_banned ? "Sí" : "No"}</TableCell>
+                <TableCell>{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => openEditModal(u)}>
+                      Editar
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(u.email)}>
+                      Eliminar
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => handleToggleBan(u.email, u.is_banned)}>
+                      {u.is_banned ? "Desbanear" : "Banear"}
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+
+        {/* Modal de edición */}
+        {showEditModal && editingUser && (
+          <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Usuario: {editingUser.email}</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-nickname" className="text-right">
+                    Nickname
+                  </Label>
+                  <Input
+                    id="edit-nickname"
+                    value={newNickname}
+                    onChange={(e) => setNewNickname(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-admin" className="text-right">
+                    Es admin
+                  </Label>
+                  <input
+                    id="edit-admin"
+                    type="checkbox"
+                    checked={newIsAdmin}
+                    onChange={(e) => setNewIsAdmin(e.target.checked)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-banned" className="text-right">
+                    Baneado
+                  </Label>
+                  <input
+                    id="edit-banned"
+                    type="checkbox"
+                    checked={newIsBanned}
+                    onChange={(e) => setNewIsBanned(e.target.checked)}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleUpdateUser} disabled={isProcessing}>
+                  {isProcessing ? "Guardando..." : "Guardar Cambios"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </>
   );
