@@ -9,6 +9,8 @@ type User = {
   nickname: string;
   avatar_url: string;
   is_admin: boolean;
+  is_banned: boolean;
+  created_at: string;
 };
 
 type AuthContextType = {
