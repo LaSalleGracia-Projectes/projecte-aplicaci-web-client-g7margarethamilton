@@ -9,7 +9,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
-import { MoonIcon, SunIcon, UserIcon } from "lucide-react";
+import { MoonIcon, SunIcon, UserIcon, GlobeIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/app/providers";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +24,17 @@ export default function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
+
+  const languages = [
+    { code: "es", name: "Español" },
+    { code: "ca", name: "Català" },
+    { code: "en", name: "English" },
+  ];
+
+  const handleLanguageChange = (langCode: string) => {
+    console.log(`Idioma seleccionado: ${langCode}`);
+    // Aquí puedes añadir la lógica para cambiar el idioma más adelante
+  };
 
   return (
     <header className="bg-background/80 backdrop-blur-sm shadow-sm w-full">
@@ -60,6 +71,27 @@ export default function Header() {
 
         {/* Acciones a la derecha */}
         <div className="flex items-center gap-3 shrink-0">
+          {/* Dropdown de idiomas */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <GlobeIcon className="h-5 w-5" />
+                <span className="sr-only">Cambiar idioma</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {languages.map((lang) => (
+                <DropdownMenuItem 
+                  key={lang.code} 
+                  onClick={() => handleLanguageChange(lang.code)}
+                >
+                  {lang.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Botón de tema */}
           <Button
             variant="ghost"
             size="icon"
@@ -74,6 +106,7 @@ export default function Header() {
             <span className="sr-only">Toggle theme</span>
           </Button>
 
+          {/* Menú de usuario */}
           {user ? (
             <div className="flex items-center gap-3">
               {user.is_admin && (
