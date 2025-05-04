@@ -1,0 +1,74 @@
+{
+    "sections": [
+        {
+        "title": "WEB 🖥️",
+        "items": [
+            {
+            "name": "Next.js",
+            "icon": "siNextdotjs",
+            "description": "Framework de React que permite la renderización del lado del servidor (SSR) y la generación de sitios estáticos (SSG)."
+            },
+            {
+            "name": "React.tsx",
+            "icon": "siReact",
+            "description": "Biblioteca de JavaScript para construir interfaces de usuario interactivas y reutilizables."
+            },
+            {
+            "name": "TypeScript",
+            "icon": "siTypescript",
+            "description": "Superconjunto de JavaScript que añade tipado estático opcional y otras características avanzadas."
+            }
+        ]
+        },
+        {
+        "title": "APP 📱",
+        "items": [
+            {
+            "name": "Kotlin",
+            "icon": "siKotlin",
+            "description": "Lenguaje de programación moderno utilizado para el desarrollo de aplicaciones Android."
+            },
+            {
+            "name": "Android",
+            "icon": "siAndroid",
+            "description": "Sistema operativo móvil desarrollado por Google utilizado en smartphones y tablets."
+            }
+        ]
+        },
+        {
+        "title": "BACKEND 🤖",
+        "items": [
+            {
+            "name": "Node.js",
+            "icon": "siNodedotjs",
+            "description": "Entorno de ejecución de JavaScript en el servidor para construir APIs y servicios backend."
+            },
+            {
+            "name": "Supabase",
+            "icon": "siSupabase",
+            "description": "Plataforma de desarrollo de aplicaciones que proporciona base de datos y autenticación."
+            }
+        ]
+        },
+        {
+        "title": "HERRAMIENTAS 🛠️​",
+        "items": [
+            {
+            "name": "GitHub",
+            "icon": "siGithub",
+            "description": "Plataforma de control de versiones y colaboración en código."
+            },
+            {
+            "name": "Figma",
+            "icon": "siFigma",
+            "description": "Herramienta de diseño para crear prototipos de interfaces."
+            },
+            {
+            "name": "Notion",
+            "icon": "siNotion",
+            "description": "Espacio centralizado para documentación y organización del equipo."
+            }
+            ]
+        }
+    ]
+} 
