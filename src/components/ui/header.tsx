@@ -19,7 +19,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import supabase from "@/lib/supabase";
 
 export default function Header() {
   const pathname = usePathname();
@@ -80,7 +79,7 @@ export default function Header() {
               {user.is_admin && (
                 <Link href="/admin">
                   <Button variant="ghost" className="px-3 py-2">
-                    Panel Admin
+                    Panel Admin ✨  
                   </Button>
                 </Link>
               )}

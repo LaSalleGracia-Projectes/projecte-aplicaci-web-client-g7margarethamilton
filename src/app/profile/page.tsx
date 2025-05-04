@@ -18,15 +18,71 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale"; // Opcional: para español
+import { es } from "date-fns/locale";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [users, setUsers] = useState<any[]>([]);
   const { user, loading } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [tempNickname, setTempNickname] = useState(user?.nickname || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Función mejorada para formatear fechas
+  const formatDate = (dateString: string) => {
+    try {
+      let date = new Date(dateString);
+      
+      if (isNaN(date.getTime())) {
+        date = new Date(dateString.replace(/-/g, '/').replace(/T/, ' '));
+        
+        if (isNaN(date.getTime())) {
+          const parsed = Date.parse(dateString);
+          date = isNaN(parsed) ? new Date() : new Date(parsed);
+        }
+      }
+      
+      return format(date, "PPP", { locale: es });
+    } catch (error) {
+      console.error("Error formateando fecha:", error);
+      return "Fecha no disponible";
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!tempNickname.trim()) return;
+    
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("tokenWeb");
+      if (!token) throw new Error("No hay token de autenticación");
+
+      const response = await fetch("http://localhost:3000/api/v1/user/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ nickname: tempNickname })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error al actualizar");
+      }
+
+      const updatedUser = await response.json();
+      
+      // Actualizar el estado local y global
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      window.location.reload(); // Forzar actualización
+
+    } catch (error) {
+      console.error("Error al actualizar perfil:", error);
+      alert(error instanceof Error ? error.message : "Error desconocido");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -41,34 +97,11 @@ export default function ProfilePage() {
     return null;
   }
 
-  // Formatear fecha correctamente
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return "Fecha no disponible";
-    }
-    return format(date, "PPP", { locale: es });
-  };
-
-  const handleSaveChanges = async () => {
-    setIsSubmitting(true);
-    try {
-      // Aquí iría tu llamada API para actualizar el usuario
-      // await updateUserProfile({ nickname: tempNickname });
-      setIsEditOpen(false);
-    } catch (error) {
-      console.error("Error al actualizar perfil:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <>
       <Header />
       <div className="container mx-auto py-8 px-4 flex justify-center">
         <div className="w-full max-w-3xl">
-          {/* Tarjeta de perfil */}
           <div className="bg-card rounded-lg shadow-sm border p-6 flex flex-col md:flex-row gap-6">
             {/* Sección izquierda - Avatar */}
             <div className="flex flex-col items-center gap-4 w-full md:w-1/3">
@@ -132,7 +165,10 @@ export default function ProfilePage() {
 
               <div className="flex gap-4">
                 <Button
-                  onClick={() => setIsEditOpen(true)}
+                  onClick={() => {
+                    setTempNickname(user.nickname || "");
+                    setIsEditOpen(true);
+                  }}
                   className="flex-1"
                   variant="outline"
                 >

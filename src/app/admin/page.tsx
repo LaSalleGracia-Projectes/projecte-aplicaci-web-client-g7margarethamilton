@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
 import Header from "@/components/ui/header";
+import { Loader2, Edit, Trash2, Ban, CheckCircle, PlusCircle, AlertTriangle } from "lucide-react";
 
-// Componentes de shadcn (no modificados)
+// Componentes de shadcn
 import {
   Table,
   TableHeader,
@@ -23,9 +24,11 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -36,38 +39,75 @@ export default function AdminPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
 
+  // Estados para los diálogos de confirmación
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [userToBan, setUserToBan] = useState<{email: string, isBanned: boolean} | null>(null);
+
+  // Función optimizada para hacer peticiones
+  const makeRequest = async (endpoint: string, method: string, body: any = {}) => {
+    const token = localStorage.getItem("tokenWeb");
+  
+    if (!token) {
+      const error = new Error("No se encontró token de autenticación");
+      console.error(error.message);
+      throw error;
+    }
+  
+    const fullBody = {
+      ...body,
+      userId: user?.email // Solo este campo es obligatorio en el cuerpo
+    };
+  
+    try {
+      const response = await fetch(`http://localhost:3000/api/v1/user${endpoint}`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: method !== "GET" ? JSON.stringify(fullBody) : undefined,
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || `Error ${response.status}`);
+      }
+  
+      return data;
+    } catch (error: any) {
+      console.error("Error en la petición:", error);
+      throw error;
+    }
+  };
+
+  // Cargar usuarios
+  const loadUsers = async () => {
+    try {
+      const data = await makeRequest("", "GET");
+      setUsers(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setFetchLoading(false);
+    }
+  };
+
   // Validar acceso al panel
   useEffect(() => {
+    console.log("Usuario actual:", {
+      email: user?.email,
+      isAdmin: user?.is_admin,
+      token: localStorage.getItem("tokenWeb")?.slice(0, 10) + "..."
+    });
+    
     if (!authLoading && (!user || !user.is_admin)) {
-      return router.push("/");
+      router.push("/");
+      return;
     }
-
-    const fetchUsers = async () => {
-      try {
-        const token = localStorage.getItem("tokenWeb");
-
-        const res = await fetch("http://localhost:3000/api/v1/user", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error("Error al obtener usuarios");
-        }
-
-        const data = await res.json();
-        setUsers(data);
-      } catch (err: any) {
-        console.error("Error al cargar usuarios:", err.message);
-        setError("No se pudieron cargar los usuarios");
-      } finally {
-        setFetchLoading(false);
-      }
-    };
-
-    fetchUsers();
+    loadUsers();
   }, [user, authLoading]);
+  
 
   // Validación de contraseña
   const validatePassword = (password: string) => {
@@ -86,210 +126,119 @@ export default function AdminPage() {
     }
 
     try {
-      const newUserWithUserId = { ...newUser, userId: newUser.email };
-      const apiResponse = await fetch("http://localhost:3000/api/v1/auth/register", {
+      await fetch("http://localhost:3000/api/v1/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(newUser),
       });
-
-      if (!apiResponse.ok) {
-        const errorData = await apiResponse.json().catch(() => ({ message: "Error desconocido" }));
-        throw new Error(errorData.message || "Error al crear usuario");
-      }
-
-      const userData = await apiResponse.json();
-
-      setUsers([
-        {
-          email: newUser.email,
-          nickname: newUser.nickname,
-          avatar_url: userData.avatar_url || "",
-          is_admin: false,
-          is_banned: false,
-          created_at: new Date().toISOString(),
-        },
-        ...users,
-      ]);
-
       setNewUser({ email: "", password: "", nickname: "" });
       setDialogOpen(false);
+      await loadUsers();
     } catch (err: any) {
-      let errorMessage = "Error al crear usuario";
-      if (err.code === "ECONNREFUSED") {
-        errorMessage = "No se pudo conectar con el servidor.";
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
-      console.error("Error completo:", err);
+      setError(err.message);
     }
   };
 
-  // Banear/desbanear usuario
-  const handleToggleBan = async (email: string, currentStatus: boolean) => {
+  // Eliminar usuario (con confirmación)
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    
     try {
-      const token = localStorage.getItem("tokenWeb");
-
-      const userToUpdate = users.find((u) => u.email === email);
-
-      if (!userToUpdate) {
-        throw new Error("Usuario no encontrado");
-      }
-
-      const response = await fetch(`http://localhost:3000/api/v1/user/${email}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          nickname: userToUpdate.nickname,
-          avatar_url: userToUpdate.avatar_url,
-          is_admin: userToUpdate.is_admin,
-          is_banned: !currentStatus,
-
-          // ✅ Enviar `userId` desde el frontend
-          userId: user?.email,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al actualizar estado de baneo");
-      }
-
-      const updatedUser = await response.json();
-      setUsers(
-        users.map((u) =>
-          u.email === email ? { ...u, is_banned: !currentStatus } : u
-        )
+      await makeRequest(
+        `/${userToDelete}`,
+        "DELETE",
+        {}
       );
+      setUsers(users.filter(u => u.email !== userToDelete));
+      setUserToDelete(null);
     } catch (err: any) {
-      setError("No se pudo banear al usuario");
-      console.error("Error al banear:", err.message);
-    }
-  };
-
-  // Eliminar usuario
-  const handleDeleteUser = async (email: string) => {
-    try {
-      const token = localStorage.getItem("tokenWeb");
-
-      const response = await fetch(`http://localhost:3000/api/v1/user/${email}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          // ✅ Requerido por tu backend
-          userId: user?.email,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al eliminar usuario");
-      }
-
-      setUsers(users.filter((u) => u.email !== email));
-    } catch (err: any) {
-      setError("No se pudo eliminar el usuario");
-      console.error("Error al eliminar:", err.message);
+      setError(err.message);
     }
   };
 
   // Editar usuario
-  const openEditModal = (u: any) => {
-    setEditingUser(u);
-    setNewNickname(u.nickname);
-    setNewIsAdmin(u.is_admin);
-    setNewIsBanned(u.is_banned);
-    setShowEditModal(true);
-  };
-
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [newNickname, setNewNickname] = useState("");
-  const [newIsAdmin, setNewIsAdmin] = useState(false);
-  const [newIsBanned, setNewIsBanned] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    nickname: "",
+    is_admin: false,
+    is_banned: false
+  });
+
+  const openEditModal = (user: any) => {
+    setEditingUser(user);
+    setEditForm({
+      nickname: user.nickname,
+      is_admin: user.is_admin,
+      is_banned: user.is_banned
+    });
+  };
 
   const handleUpdateUser = async () => {
     if (!editingUser) return;
-
-    setIsProcessing(true);
-    setError("");
-
+  
     try {
-      const token = localStorage.getItem("tokenWeb");
-
-      const response = await fetch(`http://localhost:3000/api/v1/user/${editingUser.email}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          nickname: newNickname,
-          is_admin: newIsAdmin,
-          is_banned: newIsBanned,
-          userId: user?.email, // ✅ Enviar `userId` desde frontend
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al guardar los cambios");
-      }
-
-      refreshUsers();
-      setShowEditModal(false);
+      await makeRequest(
+        `/${editingUser.email}`,
+        "PUT",
+        {
+          nickname: editForm.nickname,
+          is_admin: editForm.is_admin,
+          is_banned: editForm.is_banned,
+          avatar_url: editingUser.avatar_url,
+          // No repitas email/userId aquí, makeRequest ya los incluye
+        }
+      );
+      await loadUsers();
+      setEditingUser(null);
     } catch (err: any) {
-      setError("No se pudieron guardar los cambios");
-      console.error("Error al guardar:", err.message);
-    } finally {
-      setIsProcessing(false);
+      setError(`Error al actualizar: ${err.message}`);
     }
   };
 
-  const refreshUsers = async () => {
+  // Banear/desbanear usuario (ÚNICA definición)
+  const confirmToggleBan = async () => {
+    if (!userToBan) return;
+    
     try {
-      const token = localStorage.getItem("tokenWeb");
+      const userToUpdate = users.find(u => u.email === userToBan.email);
+      if (!userToUpdate) return;
 
-      const res = await fetch("http://localhost:3000/api/v1/user", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Error al recargar usuarios");
-      }
-
-      const data = await res.json();
-      setUsers(data);
+      await makeRequest(
+        `/${userToBan.email}`,
+        "PUT",
+        {
+          nickname: userToUpdate.nickname,
+          avatar_url: userToUpdate.avatar_url,
+          is_admin: userToUpdate.is_admin,
+          is_banned: !userToBan.isBanned
+        }
+      );
+      await loadUsers();
+      setUserToBan(null);
     } catch (err: any) {
-      setError("No se pudieron recargar los usuarios");
-      console.error("Error al recargar:", err.message);
+      setError(err.message);
     }
   };
 
   // Renderizado condicional
   if (authLoading || fetchLoading) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   if (!user?.is_admin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-xl font-bold text-red-500">Acceso denegado</h2>
-        <p>No tienes permisos para acceder al panel de administración.</p>
-        <button onClick={() => router.push("/")} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+        <p className="mb-4">No tienes permisos para acceder al panel de administración.</p>
+        <Button onClick={() => router.push("/")}>
           Volver al inicio
-        </button>
+        </Button>
       </div>
     );
   }
@@ -297,18 +246,20 @@ export default function AdminPage() {
   return (
     <>
       <Header />
-      <div className="container py-8">
+      <div className="container mx-auto py-8 px-4 max-w-6xl">
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <div className="flex justify-between mb-4">
+
+        <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Panel de Administrador</h2>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
-                <span>Añadir Usuario</span>
+                <PlusCircle className="h-4 w-4" />
+                Añadir Usuario
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -346,106 +297,174 @@ export default function AdminPage() {
                     required
                   />
                 </div>
-                <Button type="submit" disabled={isProcessing}>
-                  Crear
-                </Button>
+                <DialogFooter>
+                  <Button type="submit">Crear Usuario</Button>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Nickname</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Baneado</TableHead>
-              <TableHead>Creado</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((u) => (
-              <TableRow key={u.email}>
-                <TableCell>{u.email}</TableCell>
-                <TableCell>{u.nickname}</TableCell>
-                <TableCell>{u.is_admin ? "Administrador" : "Usuario"}</TableCell>
-                <TableCell>{u.is_banned ? "Sí" : "No"}</TableCell>
-                <TableCell>{new Date(u.created_at).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openEditModal(u)}>
-                      Editar
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(u.email)}>
-                      Eliminar
-                    </Button>
-                    <Button variant="default" size="sm" onClick={() => handleToggleBan(u.email, u.is_banned)}>
-                      {u.is_banned ? "Desbanear" : "Banear"}
-                    </Button>
-                  </div>
-                </TableCell>
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Nickname</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Creado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {users.map((u) => (
+                <TableRow key={u.email}>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>{u.nickname}</TableCell>
+                  <TableCell>{u.is_admin ? "Administrador" : "Usuario"}</TableCell>
+                  <TableCell>
+                    {u.is_banned ? (
+                      <span className="text-destructive">Baneado</span>
+                    ) : (
+                      <span className="text-green-500">Activo</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(u.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => openEditModal(u)}
+                      title="Editar"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setUserToDelete(u.email)}
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={u.is_banned ? "default" : "destructive"}
+                      size="icon"
+                      onClick={() => setUserToBan({email: u.email, isBanned: u.is_banned})}
+                      title={u.is_banned ? "Desbanear" : "Banear"}
+                    >
+                      {u.is_banned ? (
+                        <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        <Ban className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
 
         {/* Modal de edición */}
-        {showEditModal && editingUser && (
-          <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editar Usuario: {editingUser.email}</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-nickname" className="text-right">
-                    Nickname
-                  </Label>
-                  <Input
-                    id="edit-nickname"
-                    value={newNickname}
-                    onChange={(e) => setNewNickname(e.target.value)}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-admin" className="text-right">
-                    Es admin
-                  </Label>
-                  <input
-                    id="edit-admin"
-                    type="checkbox"
-                    checked={newIsAdmin}
-                    onChange={(e) => setNewIsAdmin(e.target.checked)}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-banned" className="text-right">
-                    Baneado
-                  </Label>
-                  <input
-                    id="edit-banned"
-                    type="checkbox"
-                    checked={newIsBanned}
-                    onChange={(e) => setNewIsBanned(e.target.checked)}
-                    className="col-span-3"
-                  />
-                </div>
+        <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Usuario: {editingUser?.email}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nickname" className="text-right">
+                  Nickname
+                </Label>
+                <Input
+                  id="nickname"
+                  value={editForm.nickname}
+                  onChange={(e) => setEditForm({...editForm, nickname: e.target.value})}
+                  className="col-span-3"
+                />
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowEditModal(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleUpdateUser} disabled={isProcessing}>
-                  {isProcessing ? "Guardando..." : "Guardar Cambios"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Administrador</Label>
+                <Checkbox
+                  checked={editForm.is_admin}
+                  onCheckedChange={(checked) => setEditForm({...editForm, is_admin: !!checked})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Baneado</Label>
+                <Checkbox
+                  checked={editForm.is_banned}
+                  onCheckedChange={(checked) => setEditForm({...editForm, is_banned: !!checked})}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingUser(null)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdateUser}>
+                Guardar Cambios
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo de confirmación para eliminar */}
+        <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Confirmar eliminación
+              </DialogTitle>
+              <DialogDescription>
+                ¿Estás seguro que deseas eliminar permanentemente este usuario? Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUserToDelete(null)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={confirmDeleteUser}>
+                Confirmar Eliminación
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo de confirmación para banear/desbanear */}
+        <Dialog open={!!userToBan} onOpenChange={(open) => !open && setUserToBan(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                {userToBan?.isBanned ? "Desbanear usuario" : "Banear usuario"}
+              </DialogTitle>
+              <DialogDescription>
+                {userToBan?.isBanned 
+                  ? "¿Estás seguro que deseas desbanear a este usuario?"
+                  : "¿Estás seguro que deseas banear a este usuario?"}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUserToBan(null)}>
+                Cancelar
+              </Button>
+              <Button 
+                variant={userToBan?.isBanned ? "default" : "destructive"} 
+                onClick={confirmToggleBan}
+              >
+                {userToBan?.isBanned ? "Confirmar Desbaneo" : "Confirmar Baneo"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

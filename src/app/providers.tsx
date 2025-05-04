@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         is_admin: !!userData.is_admin, // Garantiza que sea booleano
       });
   
-      window.location.reload();
+      router.push("/"); // Redirigir a la página principal después 
     } catch (error: any) {
       console.error("Login error:", error.response?.data || error.message);
       throw new Error("Credenciales inválidas o servidor no disponible");
