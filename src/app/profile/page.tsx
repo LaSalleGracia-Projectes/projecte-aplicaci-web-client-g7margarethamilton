@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit, Lock, Upload } from "lucide-react";
+import { Loader2, Edit, Upload } from "lucide-react";
 import Header from "@/components/ui/header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -23,15 +23,17 @@ import { es } from "date-fns/locale";
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [tempNickname, setTempNickname] = useState(user?.nickname || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Función mejorada para formatear fechas
+  // Formatear fechas correctamente
   const formatDate = (dateString: string) => {
     try {
       let date = new Date(dateString);
-      
+
       if (isNaN(date.getTime())) {
         date = new Date(dateString.replace(/-/g, '/').replace(/T/, ' '));
         
@@ -40,7 +42,7 @@ export default function ProfilePage() {
           date = isNaN(parsed) ? new Date() : new Date(parsed);
         }
       }
-      
+
       return format(date, "PPP", { locale: es });
     } catch (error) {
       console.error("Error formateando fecha:", error);
@@ -48,37 +50,48 @@ export default function ProfilePage() {
     }
   };
 
+  // Guardar cambios del perfil
   const handleSaveChanges = async () => {
     if (!tempNickname.trim()) return;
-    
+
     setIsSubmitting(true);
+    setError(null);
+
     try {
       const token = localStorage.getItem("tokenWeb");
-      if (!token) throw new Error("No hay token de autenticación");
+      if (!token) throw new Error("Token no encontrado");
 
-      const response = await fetch("http://localhost:3000/api/v1/user/profile", {
+      const response = await fetch(`http://localhost:3000/api/v1/user/${user.email}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ nickname: tempNickname })
+        body: JSON.stringify({
+          nickname: tempNickname,
+
+          // ✅ Aseguramos que estos campos no sean undefined
+          avatar_url: user.avatar_url ?? null,
+          is_admin: user.is_admin ?? false,
+          is_banned: user.is_banned ?? false,
+
+          // ✅ Requerido por el backend
+          userId: user?.email,
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Error al actualizar");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al guardar los cambios");
       }
 
       const updatedUser = await response.json();
-      
-      // Actualizar el estado local y global
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      window.location.reload(); // Forzar actualización
+      localStorage.setItem("user", JSON.stringify(updatedUser.user || updatedUser));
+      window.location.reload();
 
-    } catch (error) {
-      console.error("Error al actualizar perfil:", error);
-      alert(error instanceof Error ? error.message : "Error desconocido");
+    } catch (err: any) {
+      setError(err.message || "No se pudieron guardar los cambios");
+      console.error("Error al guardar:", err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,6 +113,7 @@ export default function ProfilePage() {
   return (
     <>
       <Header />
+
       <div className="container mx-auto py-8 px-4 flex justify-center">
         <div className="w-full max-w-3xl">
           <div className="bg-card rounded-lg shadow-sm border p-6 flex flex-col md:flex-row gap-6">
@@ -175,11 +189,12 @@ export default function ProfilePage() {
                   <Edit className="h-4 w-4 mr-2" />
                   Editar perfil
                 </Button>
-                <Button className="flex-1" variant="outline">
-                  <Lock className="h-4 w-4 mr-2" />
-                  Cambiar contraseña
-                </Button>
               </div>
+
+              {/* Mostrar mensaje de error si hay */}
+              {error && (
+                <p className="text-red-500 text-sm mt-2">{error}</p>
+              )}
             </div>
           </div>
         </div>
@@ -215,12 +230,12 @@ export default function ProfilePage() {
               disabled={isSubmitting || !tempNickname.trim()}
             >
               {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 "Guardar cambios"
               )}
             </Button>
-          </DialogFooter>   
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
