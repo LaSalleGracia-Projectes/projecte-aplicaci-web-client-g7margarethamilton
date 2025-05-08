@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
-import { Button } from "@/components/ui/button";
 import Header from "@/components/ui/header";
 import Image from "next/image";
+import DownloadButton from "@/components/ui/download-btn";
 
 export default function Homepage() {
   const { user, loading } = useAuth();
@@ -52,35 +52,12 @@ export default function Homepage() {
             Planifica tus tareas, gestiona tus proyectos y mantente productivo
             sin esfuerzo.
           </motion.p>
-          <Button
+          <DownloadButton
             size="lg"
-            onClick={() => {
-              const link = document.createElement("a");
-              link.href = "/downloads/flow2day-mobile.zip";
-              link.download = "flow2day-mobile.zip";
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mr-2"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Descargar App
-          </Button>
+            downloadUrl="/downloads/flow2day-mobile.zip"
+            filename="flow2day-mobile.zip"
+            buttonText="Descargar App"
+          />
         </div>
         <div className="md:w-1/2 flex justify-center">
           <Image
