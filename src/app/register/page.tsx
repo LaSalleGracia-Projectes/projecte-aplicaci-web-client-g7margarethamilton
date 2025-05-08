@@ -52,8 +52,8 @@ const RegisterForm = () => {
       const axiosError =
         err instanceof AxiosError
           ? err.response?.data?.message
-          : "Error en el registro";
-      setError(axiosError || "Error en el registro");
+          : "Error en el registro minimo";
+      setError(axiosError || "Error: minimo 9 caracteres, al menos 3 mayúsculas, 3 minúsculas y 3 números");
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,7 @@ const RegisterForm = () => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                 >
-                  <Alert variant="destructive" className="text-sm py-2">
+                  <Alert variant="success" className="text-sm py-2">
                     <AlertDescription>
                       <CheckCircle className="inline-block mr-2 h-4 w-4" />
                       {success}

@@ -187,7 +187,6 @@ export default function AdminPage() {
           is_admin: editForm.is_admin,
           is_banned: editForm.is_banned,
           avatar_url: editingUser.avatar_url,
-          // No repitas email/userId aquí, makeRequest ya los incluye
         }
       );
       await loadUsers();
