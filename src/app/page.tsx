@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
-import { Button } from "@/components/ui/button";
 import Header from "@/components/ui/header";
 import Image from "next/image";
+import DownloadButton from "@/components/ui/download-btn";
 
 export default function Homepage() {
   const { user, loading } = useAuth();
@@ -49,24 +49,50 @@ export default function Homepage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
           >
-            Planifica tus tareas, gestiona tus proyectos y mantente productivo sin esfuerzo.
+            Planifica tus tareas, gestiona tus proyectos y mantente productivo
+            sin esfuerzo.
           </motion.p>
-          <Button size="lg">Empieza ahora</Button>
+          <DownloadButton
+            size="lg"
+            downloadUrl="/downloads/flow2day-mobile.zip"
+            filename="flow2day-mobile.zip"
+            buttonText="Descargar App"
+          />
         </div>
         <div className="md:w-1/2 flex justify-center">
-          <Image src="/study.svg" alt="Ilustración productividad" width={500} height={500} priority />
+          <Image
+            src="/study.svg"
+            alt="Ilustración productividad"
+            width={500}
+            height={500}
+            priority
+          />
         </div>
       </section>
 
       {/* Sección Características */}
       <section className="py-16 w-full max-w-4xl text-center">
-        <h2 className="text-3xl font-bold mb-6">¿Qué puedes hacer con Flow2Day?</h2>
+        <h2 className="text-3xl font-bold mb-6">
+          ¿Qué puedes hacer con Flow2Day?
+        </h2>
         <div className="grid md:grid-cols-2 gap-8">
           {[
-            { title: "📅 Calendario Inteligente", desc: "Organiza tus eventos y compromisos de forma sencilla. Programa reuniones, recordatorios y fechas importantes sin esfuerzo." },
-            { title: "✅ Agenda de Tareas", desc: "Crea listas de tareas diarias y mantén el control de lo que tienes por hacer. Marca tareas completadas y sigue tu progreso." },
-            { title: "📊 Dashboard de Productividad", desc: "Visualiza tu rendimiento diario con estadísticas claras. Analiza cómo gestionas tu tiempo y mejora tu flujo de trabajo." },
-            { title: "👀 Seguimiento del Progreso", desc: "Mantén una vista general de tus avances con gráficos y métricas. Descubre patrones y optimiza tu productividad." }
+            {
+              title: "📅 Calendario Inteligente",
+              desc: "Organiza tus eventos y compromisos de forma sencilla. Programa reuniones, recordatorios y fechas importantes sin esfuerzo.",
+            },
+            {
+              title: "✅ Agenda de Tareas",
+              desc: "Crea listas de tareas diarias y mantén el control de lo que tienes por hacer. Marca tareas completadas y sigue tu progreso.",
+            },
+            {
+              title: "📊 Dashboard de Productividad",
+              desc: "Visualiza tu rendimiento diario con estadísticas claras. Analiza cómo gestionas tu tiempo y mejora tu flujo de trabajo.",
+            },
+            {
+              title: "👀 Seguimiento del Progreso",
+              desc: "Mantén una vista general de tus avances con gráficos y métricas. Descubre patrones y optimiza tu productividad.",
+            },
           ].map((feature, index) => (
             <motion.div
               key={index}
@@ -83,7 +109,9 @@ export default function Homepage() {
       </section>
 
       <footer className="bg-secondary py-8 text-center w-full">
-        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Flow2Day - Hecho con ❤️ y Next.js</p>
+        <p className="text-sm text-muted-foreground">
+          © {new Date().getFullYear()} Flow2Day - Hecho con ❤️ y Next.js
+        </p>
       </footer>
     </div>
   );
