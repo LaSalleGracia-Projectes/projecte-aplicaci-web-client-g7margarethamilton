@@ -10,6 +10,7 @@ export default function CreateScheduleForm() {
     e.preventDefault();
     setLoading(true);
 
+const user = JSON.parse(localStorage.getItem("user") || "{}");
     const res = await fetch("http://localhost:3000/api/v1/schedule", {
       method: "POST",
       headers: {
@@ -18,11 +19,13 @@ export default function CreateScheduleForm() {
       },
       body: JSON.stringify({
         title,
-        isFavorite: false,
-        email: localStorage.getItem("userEmail"),
+        is_favorite: false,
+        userId: user.email,
         id_category: null,
       }),
     });
+
+    console.log("payload sent: ", res);
 
     if (res.ok) {
       location.reload(); // recarga para ver la nueva agenda
