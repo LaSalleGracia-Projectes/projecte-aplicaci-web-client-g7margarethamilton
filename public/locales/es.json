@@ -7,5 +7,47 @@
         "logout": "Cerrar sesión",
         "login": "Iniciar sesión",
         "signup": "Regístrate"
+    },
+    "home": {
+        "title": "Organiza tu vida con Flow2Day",
+        "description": "Planifica tus tareas, gestiona tus proyectos y mantente productivo sin esfuerzo.",
+        "download_button": "Descargar App",
+        "features_title": "¿Qué puedes hacer con Flow2Day?",
+        "features": [
+            {
+                "title": "📅 Calendario Inteligente",
+                "description": "Organiza tus eventos y compromisos de forma sencilla. Programa reuniones, recordatorios y fechas importantes sin esfuerzo."
+            },
+            {
+                "title": "✅ Agenda de Tareas",
+                "description": "Crea listas de tareas diarias y mantén el control de lo que tienes por hacer. Marca tareas completadas y sigue tu progreso."
+            },
+            {
+                "title": "📊 Dashboard de Productividad",
+                "description": "Visualiza tu rendimiento diario con estadísticas claras. Analitza cómo gestionas tu tiempo y mejora tu flujo de trabajo."
+            },
+            {
+                "title": "👀 Seguimiento del Progreso",
+                "description": "Mantén una vista general de tus avances con gráficos y métricas. Descubre patrones y optimiza tu productividad."
+            }
+        ],
+        "footer": "© {year} Flow2Day - Hecho con ❤️ y Next.js",
+        "loading": "Cargando...",
+        "image_alt": "Ilustración de productividad"
+    },
+    "register": {
+        "title": "Regístrate",
+        "description": "Crea tu cuenta para acceder",
+        "nickname_label": "Nombre de Usuario",
+        "nickname_placeholder": "Tu nombre",
+        "email_label": "Email",
+        "email_placeholder": "nombre@ejemplo.com",
+        "password_label": "Contraseña",
+        "password_placeholder": "••••••••",
+        "submit_button": "Registrarse",
+        "submitting_button": "Registrando...",
+        "success_message": "Usuario registrado con éxito",
+        "error_message": "Error: mínimo 9 caracteres, al menos 3 mayúsculas, 3 minúsculas y 3 números",
+        "footer_text": "¿Ya tienes una cuenta? Inicia sesión"
     }
 }

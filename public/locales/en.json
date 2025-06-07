@@ -7,5 +7,32 @@
         "logout": "Log out",
         "login": "Log in",
         "signup": "Sign up"
+    },
+    "home": {
+        "title": "Organize your life with Flow2Day",
+        "description": "Plan your tasks, manage your projects, and stay productive effortlessly.",
+        "download_button": "Download App",
+        "features_title": "What can you do with Flow2Day?",
+        "features": [
+            {
+                "title": "📅 Smart Calendar",
+                "description": "Organize your events and commitments easily. Schedule meetings, reminders, and important dates effortlessly."
+            },
+            {
+                "title": "✅ Task Agenda",
+                "description": "Create daily to-do lists and keep track of what needs to be done. Mark tasks as completed and monitor your progress."
+            },
+            {
+                "title": "📊 Productivity Dashboard",
+                "description": "Visualize your daily performance with clear statistics. Analyze how you manage your time and improve your workflow."
+            },
+            {
+                "title": "👀 Progress Tracking",
+                "description": "Keep an overview of your progress with charts and metrics. Discover patterns and optimize your productivity."
+            }
+        ],
+        "footer": "© {year} Flow2Day - Made with ❤️ and Next.js",
+        "loading": "Loading...",
+        "image_alt": "Productivity illustration"
     }
 }

@@ -7,5 +7,32 @@
         "logout": "Tanca sessió",
         "login": "Inicia sessió",
         "signup": "Registra't"
+    },
+    "home": {
+        "title": "Organitza la teva vida amb Flow2Day",
+        "description": "Planifica les teves tasques, gestiona els teus projectes i mantingues la productivitat sense esforç.",
+        "download_button": "Descarregar App",
+        "features_title": "Què pots fer amb Flow2Day?",
+        "features": [
+            {
+                "title": "📅 Calendari Intel·ligent",
+                "description": "Organitza els teus esdeveniments i compromisos fàcilment. Programa reunions, recordatoris i dates importants sense esforç."
+            },
+            {
+                "title": "✅ Agenda de Tasques",
+                "description": "Crea llistes de tasques diàries i mantingues el control del que has de fer. Marca les tasques completades i segueix el teu progrés."
+            },
+            {
+                "title": "📊 Tauler de Productivitat",
+                "description": "Visualitza el teu rendiment diari amb estadístiques clares. Analitza com gestiones el temps i millora el teu flux de treball."
+            },
+            {
+                "title": "👀 Seguiment del Progrés",
+                "description": "Mantén una visió general dels teus avanços amb gràfics i mètriques. Descobreix patrons i optimitza la teva productivitat."
+            }
+        ],
+        "footer": "© {year} Flow2Day - Fet amb ❤️ i Next.js",
+        "loading": "Carregant...",
+        "image_alt": "Il·lustració de productivitat"
     }
 }
