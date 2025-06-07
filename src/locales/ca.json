@@ -1,0 +1,11 @@
+{
+    "header": {
+        "about_us": "Sobre nosaltres",
+        "contact": "Contacte",
+        "admin_panel": "Panell Admin ✨",
+        "profile": "Perfil",
+        "logout": "Tanca sessió",
+        "login": "Inicia sessió",
+        "signup": "Registra't"
+    }
+}

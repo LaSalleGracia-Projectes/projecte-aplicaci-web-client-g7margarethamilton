@@ -1,0 +1,11 @@
+{
+    "header": {
+        "about_us": "Sobre nosotros",
+        "contact": "Contacto",
+        "admin_panel": "Panel Admin ✨",
+        "profile": "Perfil",
+        "logout": "Cerrar sesión",
+        "login": "Iniciar sesión",
+        "signup": "Regístrate"
+    }
+}
