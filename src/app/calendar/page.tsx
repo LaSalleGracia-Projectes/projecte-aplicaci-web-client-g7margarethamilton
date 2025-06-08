@@ -11,7 +11,7 @@ import {
   isSameMonth,
   isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Edit, Trash } from "lucide-react"; // Añadido Edit y Trash
+import { ChevronLeft, ChevronRight, Plus, Edit, Trash } from "lucide-react";
 import Header from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,13 +24,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+// Definición de colores disponibles
+const COLOR_OPTIONS = [
+  { value: "blue", label: "Azul", bg: "bg-blue-500", bgLight: "bg-blue-100", text: "text-blue-800" },
+  { value: "red", label: "Rojo", bg: "bg-red-500", bgLight: "bg-red-100", text: "text-red-800" },
+  { value: "green", label: "Verde", bg: "bg-green-500", bgLight: "bg-green-100", text: "text-green-800" },
+  { value: "yellow", label: "Amarillo", bg: "bg-yellow-500", bgLight: "bg-yellow-100", text: "text-yellow-800" },
+  { value: "purple", label: "Morado", bg: "bg-purple-500", bgLight: "bg-purple-100", text: "text-purple-800" },
+  { value: "pink", label: "Rosa", bg: "bg-pink-500", bgLight: "bg-pink-100", text: "text-pink-800" },
+  { value: "indigo", label: "Indigo", bg: "bg-indigo-500", bgLight: "bg-indigo-100", text: "text-indigo-800" },
+];
+
+type ColorOption = typeof COLOR_OPTIONS[number];
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -41,35 +47,23 @@ export default function CalendarPage() {
       title: string;
       description: string;
       date: Date;
-      priority: "low" | "medium" | "high";
+      color: string;
     }>
   >([]);
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
-    priority: "medium" as "low" | "medium" | "high",
+    color: "blue",
   });
-  // Estado para el evento que se está editando
   const [editingEvent, setEditingEvent] = useState<
     | {
         id: string;
         title: string;
         description: string;
-        priority: "low" | "medium" | "high";
+        color: string;
       }
     | undefined
   >(undefined);
-
-  // Mapeo para mostrar el texto de la prioridad
-  const priorityLabels: Record<"low" | "medium" | "high", string> = {
-    low: "Baja",
-    medium: "Media",
-    high: "Alta",
-  };
-
-  const handleDeleteEvent = (id: string) => {
-    setEvents(events.filter((event) => event.id !== id));
-  };
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -93,10 +87,9 @@ export default function CalendarPage() {
     };
 
     setEvents([...events, event]);
-    setNewEvent({ title: "", description: "", priority: "medium" });
+    setNewEvent({ title: "", description: "", color: "blue" });
   };
 
-  // Función para actualizar un evento existente
   const handleUpdateEvent = () => {
     if (!editingEvent || !selectedDate) return;
 
@@ -107,17 +100,25 @@ export default function CalendarPage() {
               ...event,
               title: editingEvent.title,
               description: editingEvent.description,
-              priority: editingEvent.priority,
+              color: editingEvent.color,
               date: selectedDate,
             }
           : event
       )
     );
-    setEditingEvent(undefined); // Cierra el diálogo de edición
+    setEditingEvent(undefined);
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    setEvents(events.filter((event) => event.id !== id));
   };
 
   const getEventsForDay = (day: Date) => {
     return events.filter((event) => isSameDay(event.date, day));
+  };
+
+  const getColorClass = (colorValue: string): ColorOption => {
+    return COLOR_OPTIONS.find((c) => c.value === colorValue) || COLOR_OPTIONS[0];
   };
 
   return (
@@ -125,7 +126,8 @@ export default function CalendarPage() {
       <Header />
       <main className="flex-1 flex justify-center py-12 px-4">
         <div className="w-full max-w-4xl flex flex-col gap-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          {/* Header centrado */}
+          <div className="flex flex-col items-center gap-4">
             <h1 className="text-3xl font-bold">
               {format(currentDate, "MMMM yyyy")}
             </h1>
@@ -146,7 +148,7 @@ export default function CalendarPage() {
                     Nueva tarea
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       Crear nueva tarea para{" "}
@@ -173,21 +175,27 @@ export default function CalendarPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Select
-                        value={newEvent.priority}
-                        onValueChange={(value: "low" | "medium" | "high") =>
-                          setNewEvent({ ...newEvent, priority: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Prioridad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Baja</SelectItem>
-                          <SelectItem value="medium">Media</SelectItem>
-                          <SelectItem value="high">Alta</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <label className="text-sm font-medium">Color</label>
+                      <div className="flex flex-wrap gap-2">
+                        {COLOR_OPTIONS.map((color) => (
+                          <button
+                            key={color.value}
+                            type="button"
+                            className={cn(
+                              "w-6 h-6 rounded-full border",
+                              newEvent.color === color.value
+                                ? "ring-2 ring-offset-2 ring-primary"
+                                : "border-gray-300",
+                              color.bg
+                            )}
+                            onClick={() => {
+                              setNewEvent((prev) => ({ ...prev, color: color.value }));
+                              console.log("Color seleccionado (crear):", color.value);
+                            }}
+                            title={color.label}
+                          />
+                        ))}
+                      </div>
                     </div>
                     <Button
                       type="submit"
@@ -202,6 +210,7 @@ export default function CalendarPage() {
             </div>
           </div>
 
+          {/* Días de la semana */}
           <div className="grid grid-cols-7 gap-1">
             {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
               <div
@@ -213,6 +222,7 @@ export default function CalendarPage() {
             ))}
           </div>
 
+          {/* Días del mes */}
           <div className="grid grid-cols-7 gap-1">
             {daysInMonth.map((day) => {
               const isSelected = selectedDate && isSameDay(day, selectedDate);
@@ -247,21 +257,21 @@ export default function CalendarPage() {
                     )}
                   </div>
                   <div className="mt-1 space-y-1">
-                    {dayEvents.slice(0, 2).map((event) => (
-                      <div
-                        key={event.id}
-                        className={cn(
-                          "text-xs p-1 rounded truncate",
-                          event.priority === "high"
-                            ? "bg-red-100 text-red-800"
-                            : event.priority === "medium"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-blue-100 text-blue-800"
-                        )}
-                      >
-                        {event.title}
-                      </div>
-                    ))}
+                    {dayEvents.slice(0, 2).map((event) => {
+                      const color = getColorClass(event.color);
+                      return (
+                        <div
+                          key={event.id}
+                          className={cn(
+                            "text-xs p-1 rounded truncate",
+                            color.bgLight,
+                            color.text
+                          )}
+                        >
+                          {event.title}
+                        </div>
+                      );
+                    })}
                     {dayEvents.length > 2 && (
                       <div className="text-xs text-muted-foreground text-center">
                         +{dayEvents.length - 2} más
@@ -273,6 +283,7 @@ export default function CalendarPage() {
             })}
           </div>
 
+          {/* Lista de eventos del día seleccionado */}
           {selectedDate && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -286,7 +297,7 @@ export default function CalendarPage() {
                       Añadir tarea
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
                         Crear nueva tarea para {format(selectedDate, "PPPP")}
@@ -312,21 +323,27 @@ export default function CalendarPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Select
-                          value={newEvent.priority}
-                          onValueChange={(value: "low" | "medium" | "high") =>
-                            setNewEvent({ ...newEvent, priority: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Prioridad" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Baja</SelectItem>
-                            <SelectItem value="medium">Media</SelectItem>
-                            <SelectItem value="high">Alta</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <label className="text-sm font-medium">Color</label>
+                        <div className="flex flex-wrap gap-2">
+                          {COLOR_OPTIONS.map((color) => (
+                            <button
+                              key={color.value}
+                              type="button"
+                              className={cn(
+                                "w-6 h-6 rounded-full border",
+                                newEvent.color === color.value
+                                  ? "ring-2 ring-offset-2 ring-primary"
+                                  : "border-gray-300",
+                                color.bg
+                              )}
+                              onClick={() => {
+                                setNewEvent((prev) => ({ ...prev, color: color.value }));
+                                console.log("Color seleccionado (crear):", color.value);
+                              }}
+                              title={color.label}
+                            />
+                          ))}
+                        </div>
                       </div>
                       <Button
                         type="submit"
@@ -341,135 +358,129 @@ export default function CalendarPage() {
               </div>
               <div className="space-y-2">
                 {getEventsForDay(selectedDate).length > 0 ? (
-                  getEventsForDay(selectedDate).map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-start p-4 border rounded-lg"
-                    >
+                  getEventsForDay(selectedDate).map((event) => {
+                    const color = getColorClass(event.color);
+                    return (
                       <div
-                        className={cn(
-                          "flex-shrink-0 w-2 h-full rounded",
-                          event.priority === "high"
-                            ? "bg-red-500"
-                            : event.priority === "medium"
-                            ? "bg-yellow-500"
-                            : "bg-blue-500"
-                        )}
-                      ></div>
-                      <div className="ml-4 flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{event.title}</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">
-                              {priorityLabels[event.priority]} {/* Muestra la prioridad */}
-                            </span>
-                            {/* Botón para editar */}
-                            <Dialog
-                              open={editingEvent?.id === event.id}
-                              onOpenChange={(open) => {
-                                if (!open) setEditingEvent(undefined);
-                              }}
-                            >
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    setEditingEvent({
-                                      id: event.id,
-                                      title: event.title,
-                                      description: event.description,
-                                      priority: event.priority,
-                                    })
-                                  }
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>
-                                    Editar tarea para{" "}
-                                    {format(selectedDate, "PPPP")}
-                                  </DialogTitle>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                  <div className="grid gap-2">
-                                    <Input
-                                      placeholder="Título de la tarea"
-                                      value={editingEvent?.title || ""}
-                                      onChange={(e) =>
-                                        setEditingEvent({
-                                          ...editingEvent!,
-                                          title: e.target.value,
-                                        })
-                                      }
-                                    />
-                                  </div>
-                                  <div className="grid gap-2">
-                                    <Textarea
-                                      placeholder="Descripción"
-                                      value={editingEvent?.description || ""}
-                                      onChange={(e) =>
-                                        setEditingEvent({
-                                          ...editingEvent!,
-                                          description: e.target.value,
-                                        })
-                                      }
-                                    />
-                                  </div>
-                                  <div className="grid gap-2">
-                                    <Select
-                                      value={editingEvent?.priority || "medium"}
-                                      onValueChange={(
-                                        value: "low" | "medium" | "high"
-                                      ) =>
-                                        setEditingEvent({
-                                          ...editingEvent!,
-                                          priority: value,
-                                        })
-                                      }
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Prioridad" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="low">Baja</SelectItem>
-                                        <SelectItem value="medium">
-                                          Media
-                                        </SelectItem>
-                                        <SelectItem value="high">Alta</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                        key={event.id}
+                        className="flex items-start p-4 border rounded-lg"
+                      >
+                        <div className={`flex-shrink-0 w-2 h-full rounded ${color.bg}`}></div>
+                        <div className="ml-4 flex-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-medium">{event.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">
+                                {color.label}
+                              </span>
+                              <Dialog
+                                open={editingEvent?.id === event.id}
+                                onOpenChange={(open) => {
+                                  if (!open) setEditingEvent(undefined);
+                                }}
+                              >
+                                <DialogTrigger asChild>
                                   <Button
-                                    type="submit"
-                                    onClick={handleUpdateEvent}
-                                    disabled={!editingEvent?.title}
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      setEditingEvent({
+                                        id: event.id,
+                                        title: event.title,
+                                        description: event.description,
+                                        color: event.color,
+                                      })
+                                    }
                                   >
-                                    Guardar cambios
+                                    <Edit className="h-4 w-4" />
                                   </Button>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            {/* Botón para eliminar */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteEvent(event.id)}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-h-[80vh] overflow-y-auto">
+                                  <DialogHeader>
+                                    <DialogTitle>
+                                      Editar tarea para{" "}
+                                      {format(selectedDate, "PPPP")}
+                                    </DialogTitle>
+                                  </DialogHeader>
+                                  <div className="grid gap-4 py-4">
+                                    <div className="grid gap-2">
+                                      <Input
+                                        placeholder="Título de la tarea"
+                                        value={editingEvent?.title || ""}
+                                        onChange={(e) =>
+                                          setEditingEvent({
+                                            ...editingEvent!,
+                                            title: e.target.value,
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="grid gap-2">
+                                      <Textarea
+                                        placeholder="Descripción"
+                                        value={editingEvent?.description || ""}
+                                        onChange={(e) =>
+                                          setEditingEvent({
+                                            ...editingEvent!,
+                                            description: e.target.value,
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="grid gap-2">
+                                      <label className="text-sm font-medium">Color</label>
+                                      <div className="flex flex-wrap gap-2">
+                                        {COLOR_OPTIONS.map((color) => (
+                                          <button
+                                            key={color.value}
+                                            type="button"
+                                            className={cn(
+                                              "w-6 h-6 rounded-full border",
+                                              editingEvent?.color === color.value
+                                                ? "ring-2 ring-offset-2 ring-primary"
+                                                : "border-gray-300",
+                                              color.bg
+                                            )}
+                                            onClick={() => {
+                                              setEditingEvent((prev) => ({
+                                                ...prev!,
+                                                color: color.value,
+                                              }));
+                                              console.log("Color seleccionado (editar):", color.value);
+                                            }}
+                                            title={color.label}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="submit"
+                                      onClick={handleUpdateEvent}
+                                      disabled={!editingEvent?.title}
+                                    >
+                                      Guardar cambios
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteEvent(event.id)}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
+                          {event.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {event.description}
+                            </p>
+                          )}
                         </div>
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {event.description}
-                          </p>
-                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
                     No hay tareas programadas para este día
