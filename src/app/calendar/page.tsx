@@ -11,7 +11,7 @@ import {
   isSameMonth,
   isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Edit, Trash } from "lucide-react"; // Añadido Edit y Trash
 import Header from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,18 +35,41 @@ import {
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [events, setEvents] = useState<Array<{
-    id: string;
-    title: string;
-    description: string;
-    date: Date;
-    priority: "low" | "medium" | "high";
-  }>>([]);
+  const [events, setEvents] = useState<
+    Array<{
+      id: string;
+      title: string;
+      description: string;
+      date: Date;
+      priority: "low" | "medium" | "high";
+    }>
+  >([]);
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
     priority: "medium" as "low" | "medium" | "high",
   });
+  // Estado para el evento que se está editando
+  const [editingEvent, setEditingEvent] = useState<
+    | {
+        id: string;
+        title: string;
+        description: string;
+        priority: "low" | "medium" | "high";
+      }
+    | undefined
+  >(undefined);
+
+  // Mapeo para mostrar el texto de la prioridad
+  const priorityLabels: Record<"low" | "medium" | "high", string> = {
+    low: "Baja",
+    medium: "Media",
+    high: "Alta",
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    setEvents(events.filter((event) => event.id !== id));
+  };
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -70,11 +93,27 @@ export default function CalendarPage() {
     };
 
     setEvents([...events, event]);
-    setNewEvent({
-      title: "",
-      description: "",
-      priority: "medium",
-    });
+    setNewEvent({ title: "", description: "", priority: "medium" });
+  };
+
+  // Función para actualizar un evento existente
+  const handleUpdateEvent = () => {
+    if (!editingEvent || !selectedDate) return;
+
+    setEvents((prevEvents) =>
+      prevEvents.map((event) =>
+        event.id === editingEvent.id
+          ? {
+              ...event,
+              title: editingEvent.title,
+              description: editingEvent.description,
+              priority: editingEvent.priority,
+              date: selectedDate,
+            }
+          : event
+      )
+    );
+    setEditingEvent(undefined); // Cierra el diálogo de edición
   };
 
   const getEventsForDay = (day: Date) => {
@@ -83,13 +122,9 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Encabezado de tu app */}
       <Header />
-
-      {/* Contenido principal centrado */}
       <main className="flex-1 flex justify-center py-12 px-4">
         <div className="w-full max-w-4xl flex flex-col gap-8">
-          {/* Título y controles */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-3xl font-bold">
               {format(currentDate, "MMMM yyyy")}
@@ -114,7 +149,8 @@ export default function CalendarPage() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>
-                      Crear nueva tarea para {selectedDate && format(selectedDate, "PPPP")}
+                      Crear nueva tarea para{" "}
+                      {selectedDate && format(selectedDate, "PPPP")}
                     </DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
@@ -166,7 +202,6 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {/* Días de la semana */}
           <div className="grid grid-cols-7 gap-1">
             {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
               <div
@@ -178,7 +213,6 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          {/* Celdas del calendario */}
           <div className="grid grid-cols-7 gap-1">
             {daysInMonth.map((day) => {
               const isSelected = selectedDate && isSameDay(day, selectedDate);
@@ -212,7 +246,6 @@ export default function CalendarPage() {
                       <span className="h-2 w-2 rounded-full bg-primary"></span>
                     )}
                   </div>
-                  {/* Eventos del día */}
                   <div className="mt-1 space-y-1">
                     {dayEvents.slice(0, 2).map((event) => (
                       <div
@@ -240,7 +273,6 @@ export default function CalendarPage() {
             })}
           </div>
 
-          {/* Detalle de eventos */}
           {selectedDate && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -327,9 +359,108 @@ export default function CalendarPage() {
                       <div className="ml-4 flex-1">
                         <div className="flex items-center justify-between">
                           <h3 className="font-medium">{event.title}</h3>
-                          <span className="text-sm text-muted-foreground">
-                            {format(event.date, "HH:mm")}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {priorityLabels[event.priority]} {/* Muestra la prioridad */}
+                            </span>
+                            {/* Botón para editar */}
+                            <Dialog
+                              open={editingEvent?.id === event.id}
+                              onOpenChange={(open) => {
+                                if (!open) setEditingEvent(undefined);
+                              }}
+                            >
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    setEditingEvent({
+                                      id: event.id,
+                                      title: event.title,
+                                      description: event.description,
+                                      priority: event.priority,
+                                    })
+                                  }
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>
+                                    Editar tarea para{" "}
+                                    {format(selectedDate, "PPPP")}
+                                  </DialogTitle>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                  <div className="grid gap-2">
+                                    <Input
+                                      placeholder="Título de la tarea"
+                                      value={editingEvent?.title || ""}
+                                      onChange={(e) =>
+                                        setEditingEvent({
+                                          ...editingEvent!,
+                                          title: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                  <div className="grid gap-2">
+                                    <Textarea
+                                      placeholder="Descripción"
+                                      value={editingEvent?.description || ""}
+                                      onChange={(e) =>
+                                        setEditingEvent({
+                                          ...editingEvent!,
+                                          description: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                  <div className="grid gap-2">
+                                    <Select
+                                      value={editingEvent?.priority || "medium"}
+                                      onValueChange={(
+                                        value: "low" | "medium" | "high"
+                                      ) =>
+                                        setEditingEvent({
+                                          ...editingEvent!,
+                                          priority: value,
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Prioridad" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="low">Baja</SelectItem>
+                                        <SelectItem value="medium">
+                                          Media
+                                        </SelectItem>
+                                        <SelectItem value="high">Alta</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <Button
+                                    type="submit"
+                                    onClick={handleUpdateEvent}
+                                    disabled={!editingEvent?.title}
+                                  >
+                                    Guardar cambios
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            {/* Botón para eliminar */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteEvent(event.id)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                         {event.description && (
                           <p className="text-sm text-muted-foreground mt-1">
