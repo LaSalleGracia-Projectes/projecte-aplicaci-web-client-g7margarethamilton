@@ -51,6 +51,7 @@ export default function Header() {
               {[
                 { href: "/about-us", label: "About us" },
                 { href: "/contact", label: "Contact" },
+                ...(user ? [{ href: "/calendar", label: "Calendar" }] : []),
               ].map((item) => (
                 <NavigationMenuItem key={item.href}>
                   <NavigationMenuLink
