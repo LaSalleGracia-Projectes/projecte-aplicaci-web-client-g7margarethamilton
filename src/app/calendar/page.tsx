@@ -1,109 +1,151 @@
-// src/app/calendar/page.tsx
 "use client";
 
 import { useState } from "react";
 import {
-  addMonths,
   format,
+  addMonths,
+  subMonths,
   startOfMonth,
   endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  addDays,
+  eachDayOfInterval,
   isSameMonth,
   isSameDay,
 } from "date-fns";
-import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "@/components/ui/header";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-
-  const renderHeader = () => (
-    <div className="flex justify-between items-center mb-4">
-      <button onClick={() => setCurrentDate(addMonths(currentDate, -1))} className="p-2 text-lg font-bold">
-        &lt;
-      </button>
-      <h2 className="text-xl font-semibold">{format(currentDate, "MMMM yyyy")}</h2>
-      <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 text-lg font-bold">
-        &gt;
-      </button>
-    </div>
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
   );
 
-  const renderDays = () => {
-    const days = [];
-    const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // lunes
-    for (let i = 0; i < 7; i++) {
-      days.push(
-        <div key={i} className="text-sm font-medium text-center text-gray-600">
-          {format(addDays(start, i), "EE")}
-        </div>
-      );
-    }
-    return <div className="grid grid-cols-7">{days}</div>;
-  };
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const renderCells = () => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
-
-    const rows = [];
-    let days = [];
-    let day = startDate;
-
-    while (day <= endDate) {
-      for (let i = 0; i < 7; i++) {
-        const isCurrentMonth = isSameMonth(day, monthStart);
-        const isSelected = selectedDate && isSameDay(day, selectedDate);
-
-        days.push(
-          <div
-            key={day.toString()}
-            className={`text-sm text-center p-2 border rounded cursor-pointer ${
-              isCurrentMonth ? "text-black" : "text-gray-400"
-            } ${isSelected ? "bg-blue-500 text-white" : "hover:bg-blue-100"}`}
-            onClick={() => setSelectedDate(day)}
-          >
-            {format(day, "d")}
-          </div>
-        );
-        day = addDays(day, 1);
-      }
-      rows.push(
-        <div key={day.toString()} className="grid grid-cols-7 gap-1">
-          {days}
-        </div>
-      );
-      days = [];
-    }
-
-    return <div className="mt-2">{rows}</div>;
+  const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const handleToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today);
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center bg-background text-foreground">
-      {/* Header fijo como en home */}
-      <motion.div
-        className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-white/60 border-b border-border"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Header />
-      </motion.div>
+    <div className="min-h-screen flex flex-col">
+      {/* Encabezado de tu app */}
+      <Header />
 
-      {/* Contenido principal con padding superior para dejar espacio al header */}
-      <main className="w-full max-w-md mt-32 p-4 border rounded shadow bg-white">
-        {renderHeader()}
-        {renderDays()}
-        {renderCells()}
+      {/* Contenido principal centrado */}
+      <main className="flex-1 flex justify-center py-12 px-4">
+        <div className="w-full max-w-4xl flex flex-col gap-8">
+          {/* Título y controles */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h1 className="text-3xl font-bold">
+              {format(currentDate, "MMMM yyyy")}
+            </h1>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={handlePrevMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={handleNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleToday}>
+                Hoy
+              </Button>
+            </div>
+          </div>
+
+          {/* Días de la semana */}
+          <div className="grid grid-cols-7 gap-1">
+            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
+              <div
+                key={day}
+                className="text-center font-medium text-sm text-muted-foreground"
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Celdas del calendario */}
+          <div className="grid grid-cols-7 gap-1">
+            {daysInMonth.map((day) => {
+              const isSelected = selectedDate && isSameDay(day, selectedDate);
+              const isToday = isSameDay(day, new Date());
+
+              return (
+                <div
+                  key={day.toString()}
+                  onClick={() => setSelectedDate(day)}
+                  className={cn(
+                    "h-24 p-2 border rounded-md cursor-pointer transition-colors",
+                    isSelected
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-accent",
+                    !isSameMonth(day, currentDate) &&
+                      "text-muted-foreground opacity-50",
+                    isToday && !isSelected && "border-primary"
+                  )}
+                >
+                  <div className="flex justify-between">
+                    <span
+                      className={cn(
+                        "text-sm",
+                        isToday && !isSelected && "font-bold"
+                      )}
+                    >
+                      {format(day, "d")}
+                    </span>
+                    {isToday && (
+                      <span className="h-2 w-2 rounded-full bg-primary"></span>
+                    )}
+                  </div>
+                  {/* Evento de ejemplo */}
+                  <div className="mt-1 space-y-1">
+                    {isSameDay(day, new Date()) && (
+                      <div className="text-xs p-1 bg-blue-100 text-blue-800 rounded truncate">
+                        Reunión
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Detalle de eventos */}
+          {selectedDate && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">
+                Eventos para {format(selectedDate, "PPPP")}
+              </h2>
+              <div className="space-y-2">
+                <div className="flex items-start p-4 border rounded-lg">
+                  <div className="flex-shrink-0 w-2 h-full bg-blue-500 rounded"></div>
+                  <div className="ml-4 flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">Reunión de equipo</h3>
+                      <span className="text-sm text-muted-foreground">
+                        10:00 - 11:30
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Discusión del sprint actual
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </main>
 
-      <footer className="bg-secondary py-8 text-center w-full mt-16">
+      <footer className="bg-secondary py-8 text-center w-full">
         <p className="text-sm text-muted-foreground">
           © {new Date().getFullYear()} Flow2Day - Hecho con ❤️ y Next.js
         </p>
