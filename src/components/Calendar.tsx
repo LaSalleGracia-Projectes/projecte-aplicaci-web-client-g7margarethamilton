@@ -124,7 +124,10 @@ const Calendar: React.FC = () => {
           throw new Error("Error al eliminar el evento");
         }
 
-        selected.event.remove();
+        // Actualizar la lista de eventos después de eliminar
+        setCurrentEvents((prevEvents) => 
+          prevEvents.filter((event) => event.id !== selected.event.id)
+        );
       } catch (error) {
         console.error("Error deleting event:", error);
         setError(error instanceof Error ? error.message : "Error al eliminar el evento");
@@ -177,17 +180,21 @@ const Calendar: React.FC = () => {
           throw new Error(errorData.message || "Error al crear el evento");
         }
 
-        const createdEvent: CalendarEvent = await response.json();
-        // Transformar el evento creado al formato de FullCalendar
+        const data = await response.json();
+        const createdEvent: CalendarEvent = data.task;
+        if (!createdEvent.id) {
+          setError("Error: The created event does not have a valid ID.");
+          return;
+        }
         const formattedEvent: FormattedEvent = {
-          id: createdEvent.id?.toString() || "",
+          id: createdEvent.id.toString(),
           title: createdEvent.title,
           start: createdEvent.start_time,
           end: createdEvent.end_time,
           extendedProps: {
             content: createdEvent.content,
-            priority: createdEvent.priority,
-            is_completed: createdEvent.is_completed
+            priority: Number(createdEvent.priority),
+            is_completed: createdEvent.is_completed ?? false
           }
         };
         setCurrentEvents((prevEvents) => [...prevEvents, formattedEvent]);
@@ -214,7 +221,7 @@ const Calendar: React.FC = () => {
             )}
 
             {currentEvents.length > 0 &&
-              currentEvents.map((event: FormattedEvent) => (
+              currentEvents.map((event) => (
                 <li
                   className="border border-gray-200 shadow px-4 py-2 rounded-md text-blue-800"
                   key={event.id}
@@ -222,7 +229,7 @@ const Calendar: React.FC = () => {
                   {event.title}
                   <br />
                   <label className="text-slate-950">
-                    {formatDate(event.start!, {
+                    {formatDate(new Date(event.start), {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
