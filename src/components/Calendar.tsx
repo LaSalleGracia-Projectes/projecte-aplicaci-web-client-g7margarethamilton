@@ -186,6 +186,8 @@ const Calendar: React.FC = () => {
           setError("Error: The created event does not have a valid ID.");
           return;
         }
+        console.log("Created event:", createdEvent);
+
         const formattedEvent: FormattedEvent = {
           id: createdEvent.id.toString(),
           title: createdEvent.title,
@@ -254,6 +256,13 @@ const Calendar: React.FC = () => {
             selectable={true}
             selectMirror={true}
             dayMaxEvents={true}
+            timeZone="local"
+            firstDay={1}
+            slotLabelFormat={{
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }}
             select={(info) => {
               setSelectedDate(info);
               setIsDialogOpen(true);
