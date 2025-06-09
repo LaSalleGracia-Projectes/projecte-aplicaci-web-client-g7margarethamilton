@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   format,
   addMonths,
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/app/providers";
+import axios from "axios";
 
 // Definición de colores disponibles
 const COLOR_OPTIONS = [
@@ -38,7 +40,35 @@ const COLOR_OPTIONS = [
 
 type ColorOption = typeof COLOR_OPTIONS[number];
 
+// Configuración del cliente Axios para Supabase
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1",
+  headers: {
+    apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json",
+  },
+});
+
+// Interceptor para añadir email
+api.interceptors.request.use((config) => {
+  const user = localStorage.getItem("user");
+  console.log("Request config:", {
+    fullUrl: `${config.baseURL}${config.url}`,
+    method: config.method,
+    user: user ? JSON.parse(user) : null,
+    headers: config.headers,
+    data: config.data,
+    params: config.params,
+  });
+  if (user) {
+    config.params = { ...config.params, email: `eq.${JSON.parse(user).email}` };
+  }
+  return config;
+});
+
 export default function CalendarPage() {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [events, setEvents] = useState<
@@ -64,6 +94,163 @@ export default function CalendarPage() {
       }
     | undefined
   >(undefined);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [calendarId, setCalendarId] = useState<number | null>(null);
+
+  // Crear calendario por defecto
+  const createDefaultCalendar = async () => {
+    try {
+      console.log("Creating default calendar for email:", user?.email);
+      const response = await api.post("/calendar", {
+        title: "Default Calendar",
+        is_favorite: false,
+        id_category: null,
+        email: user?.email,
+      }, {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+      });
+      console.log("Default calendar created:", response.data);
+      return response.data[0]?.id;
+    } catch (err: any) {
+      console.error("Create calendar error:", {
+        status: err.response?.status,
+        data: err.response?.data || {},
+        message: err.message,
+        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
+      });
+      throw new Error(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.response?.data?.hint ||
+        "Error al crear calendario: verifica las políticas de acceso o los datos enviados"
+      );
+    }
+  };
+
+  // Fetch user's calendars
+  useEffect(() => {
+    if (!user?.email) {
+      setError("Por favor, inicia sesión para ver el calendario.");
+      return;
+    }
+
+    const fetchCalendars = async () => {
+      setIsLoading(true);
+      try {
+        console.log("Fetching calendars from:", `${api.defaults.baseURL}/calendar`, {
+          userEmail: user.email,
+        });
+        const response = await api.get("/calendar", {
+          params: {
+            email: `eq.${user.email}`,
+            select: "id,title,is_favorite,id_category",
+          },
+        });
+        console.log("Calendars response:", response.data);
+        let calendars = response.data;
+        if (calendars.length > 0) {
+          setCalendarId(calendars[0].id);
+        } else {
+          const newCalendarId = await createDefaultCalendar();
+          setCalendarId(newCalendarId);
+        }
+      } catch (err: any) {
+        console.error("Calendar fetch error:", {
+          status: err.response?.status,
+          data: err.response?.data || {},
+          message: err.message,
+          details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
+        });
+        setError(
+          err.response?.status === 400
+            ? "Solicitud inválida. Verifica tu cuenta o intenta de nuevo."
+            : err.response?.status === 403
+            ? "Acceso denegado: verifica las políticas de acceso en Supabase."
+            : err.response?.status === 404
+            ? "No se encontraron calendarios."
+            : err.response?.data?.message ||
+              err.response?.data?.error ||
+              err.response?.data?.hint ||
+              "Error al cargar calendarios"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCalendars();
+  }, [user]);
+
+  // Fetch tasks
+  useEffect(() => {
+    if (!calendarId || !user?.email) return;
+
+    const fetchTasks = async () => {
+      setIsLoading(true);
+      try {
+        console.log("Fetching tasks from:", `${api.defaults.baseURL}/calendar_task`, {
+          calendarId,
+          userEmail: user.email,
+        });
+        const response = await api.get("/calendar_task", {
+          params: {
+            id_calendar: `eq.${calendarId}`,
+            select: "id,title,content,start_time",
+          },
+        });
+        console.log("Tasks response:", response.data);
+        const tasks = response.data;
+        const formattedEvents = tasks.map((task: any) => {
+          let description = task.content;
+          let color = "blue";
+          try {
+            const parsedContent = JSON.parse(task.content);
+            description = parsedContent.description || "";
+            color = parsedContent.color || "blue";
+          } catch {
+            description = task.content || "";
+          }
+          return {
+            id: task.id.toString(),
+            title: task.title,
+            description,
+            date: new Date(task.start_time),
+            color,
+          };
+        });
+        console.log("Formatted events:", formattedEvents);
+        setEvents(formattedEvents);
+      } catch (err: any) {
+        console.error("Task fetch error:", {
+          status: err.response?.status,
+          data: err.response?.data || {},
+          message: err.message,
+          details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
+        });
+        setError(
+          err.response?.status === 400
+            ? "Solicitud inválida. Verifica el calendario o intenta de nuevo."
+            : err.response?.status === 403
+            ? "Acceso denegado: verifica las políticas de acceso en Supabase."
+            : err.response?.status === 404
+            ? "No se encontraron tareas."
+            : err.response?.data?.message ||
+              err.response?.data?.error ||
+              err.response?.data?.hint ||
+              "Error al cargar tareas"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [calendarId, user]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -77,40 +264,150 @@ export default function CalendarPage() {
     setSelectedDate(today);
   };
 
-  const handleCreateEvent = () => {
-    if (!selectedDate || !newEvent.title) return;
+  const handleCreateEvent = async () => {
+    if (!selectedDate || !newEvent.title || !calendarId || !user?.email) return;
 
-    const event = {
-      id: Math.random().toString(36).substring(2, 9),
-      ...newEvent,
-      date: selectedDate,
-    };
-
-    setEvents([...events, event]);
-    setNewEvent({ title: "", description: "", color: "blue" });
+    setIsLoading(true);
+    try {
+      const taskData = {
+        title: newEvent.title,
+        content: JSON.stringify({
+          description: newEvent.description,
+          color: newEvent.color,
+        }),
+        is_completed: false,
+        priority: 1,
+        start_time: selectedDate.toISOString(),
+        end_time: selectedDate.toISOString(),
+        id_calendar: calendarId,
+        id_category: null,
+      };
+      console.log("Creating task:", taskData);
+      const response = await api.post("/calendar_task", taskData);
+      const task = response.data[0];
+      setEvents([
+        ...events,
+        {
+          id: task.id.toString(),
+          title: task.title,
+          description: newEvent.description,
+          date: new Date(task.start_time),
+          color: newEvent.color,
+        },
+      ]);
+      setNewEvent({ title: "", description: "", color: "blue" });
+    } catch (err: any) {
+      console.error("Create task error:", {
+        status: err.response?.status,
+        data: err.response?.data || {},
+        message: err.message,
+        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
+      });
+      setError(
+        err.response?.status === 400
+          ? "Solicitud inválida. Verifica los datos de la tarea."
+          : err.response?.status === 403
+          ? "Acceso denegado: verifica las políticas de acceso en Supabase."
+          : err.response?.status === 404
+          ? "No se pudo crear la tarea."
+          : err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.response?.data?.hint ||
+            "Error al crear tarea"
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleUpdateEvent = () => {
-    if (!editingEvent || !selectedDate) return;
+  const handleUpdateEvent = async () => {
+    if (!editingEvent || !selectedDate || !calendarId || !user?.email) return;
 
-    setEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event.id === editingEvent.id
-          ? {
-              ...event,
-              title: editingEvent.title,
-              description: editingEvent.description,
-              color: editingEvent.color,
-              date: selectedDate,
-            }
-          : event
-      )
-    );
-    setEditingEvent(undefined);
+    setIsLoading(true);
+    try {
+      const taskData = {
+        title: editingEvent.title,
+        content: JSON.stringify({
+          description: editingEvent.description,
+          color: editingEvent.color,
+        }),
+        is_completed: false,
+        priority: 1,
+        start_time: selectedDate.toISOString(),
+        end_time: selectedDate.toISOString(),
+        id_calendar: calendarId,
+      };
+      console.log("Updating task:", taskData);
+      const response = await api.patch(`/calendar_task?id=eq.${editingEvent.id}`, taskData);
+      const task = response.data[0];
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === editingEvent.id
+            ? {
+                id: event.id,
+                title: task.title,
+                description: editingEvent.description,
+                date: new Date(task.start_time),
+                color: editingEvent.color,
+              }
+            : event
+        )
+      );
+      setEditingEvent(null);
+    } catch (err: any) {
+      console.error("Update task error:", {
+        status: err.response?.status,
+        data: err.response?.data || {},
+        message: err.message,
+        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
+      });
+      setError(
+        err.response?.status === 400
+          ? "Solicitud inválida. Verifica los datos de la tarea."
+          : err.response?.status === 403
+          ? "Acceso denegado: verifica las políticas de acceso en Supabase."
+          : err.response?.status === 404
+          ? "No se pudo actualizar la tarea."
+          : err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.response?.data?.hint ||
+            "Error al actualizar tarea"
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteEvent = (id: string) => {
-    setEvents(events.filter((event) => event.id !== id));
+  const handleDeleteEvent = async (id: string) => {
+    if (!user?.email) return;
+
+    setIsLoading(true);
+    try {
+      console.log("Deleting task:", id);
+      await api.delete(`/calendar_task?id=eq.${id}&id_calendar=eq.${calendarId}`);
+      setEvents((events) => events.filter((event) => event.id !== id));
+    } catch (err: any) {
+      console.error("Delete task error:", {
+        status: err.response?.status,
+        data: err.response?.data || {},
+        message: err.message,
+        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
+      });
+      setError(
+        err.response?.status === 400
+          ? "Solicitud inválida. Verifica la tarea."
+          : err.response?.status === 403
+          ? "Acceso denegado: verifica las políticas de acceso en Supabase."
+          : err.response?.status === 404
+          ? "No se pudo eliminar la tarea."
+          : err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.response?.data?.hint ||
+            "Error al eliminar tarea"
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getEventsForDay = (day: Date) => {
@@ -126,24 +423,47 @@ export default function CalendarPage() {
       <Header />
       <main className="flex-1 flex justify-center py-12 px-4">
         <div className="w-full max-w-4xl flex flex-col gap-8">
+          {/* Mostrar errores */}
+          {error && (
+            <div className="bg-red-100 text-red-800 p-4">
+              {error}
+            </div>
+          )}
+          {isLoading && <p className="text-center">Cargando...</p>}
+
           {/* Header centrado */}
           <div className="flex flex-col items-center gap-4">
             <h1 className="text-3xl font-bold">
               {format(currentDate, "MMMM yyyy")}
             </h1>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={handlePrevMonth}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handlePrevMonth}
+                disabled={isLoading}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={handleNextMonth}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleNextMonth}
+                disabled={isLoading}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={handleToday}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToday}
+                disabled={isLoading}
+              >
                 Hoy
               </Button>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2">
+                  <Button size="sm" className="gap-2" disabled={isLoading || !calendarId || !user}>
                     <Plus className="h-4 w-4" />
                     Nueva tarea
                   </Button>
@@ -200,9 +520,9 @@ export default function CalendarPage() {
                     <Button
                       type="submit"
                       onClick={handleCreateEvent}
-                      disabled={!newEvent.title}
+                      disabled={!newEvent.title || isLoading || !calendarId || !user}
                     >
-                      Crear tarea
+                      {isLoading ? "Creando..." : "Crear tarea"}
                     </Button>
                   </div>
                 </DialogContent>
@@ -292,7 +612,12 @@ export default function CalendarPage() {
                 </h2>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button size="sm" variant="outline" className="gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      disabled={isLoading || !calendarId || !user}
+                    >
                       <Plus className="h-4 w-4" />
                       Añadir tarea
                     </Button>
@@ -348,9 +673,9 @@ export default function CalendarPage() {
                       <Button
                         type="submit"
                         onClick={handleCreateEvent}
-                        disabled={!newEvent.title}
+                        disabled={!newEvent.title || isLoading || !calendarId || !user}
                       >
-                        Crear tarea
+                        {isLoading ? "Creando..." : "Crear tarea"}
                       </Button>
                     </div>
                   </DialogContent>
@@ -376,7 +701,7 @@ export default function CalendarPage() {
                               <Dialog
                                 open={editingEvent?.id === event.id}
                                 onOpenChange={(open) => {
-                                  if (!open) setEditingEvent(undefined);
+                                  if (!open) setEditingEvent(null);
                                 }}
                               >
                                 <DialogTrigger asChild>
@@ -391,6 +716,7 @@ export default function CalendarPage() {
                                         color: event.color,
                                       })
                                     }
+                                    disabled={isLoading}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -456,9 +782,9 @@ export default function CalendarPage() {
                                     <Button
                                       type="submit"
                                       onClick={handleUpdateEvent}
-                                      disabled={!editingEvent?.title}
+                                      disabled={!editingEvent?.title || isLoading}
                                     >
-                                      Guardar cambios
+                                      {isLoading ? "Guardando..." : "Guardar cambios"}
                                     </Button>
                                   </div>
                                 </DialogContent>
@@ -467,13 +793,14 @@ export default function CalendarPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleDeleteEvent(event.id)}
+                                disabled={isLoading}
                               >
                                 <Trash className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
                           {event.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-blue-600 text-sm mt-1">
                               {event.description}
                             </p>
                           )}
