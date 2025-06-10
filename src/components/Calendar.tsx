@@ -144,6 +144,12 @@ const Calendar: React.FC = () => {
     setNewEventEndTime("");
   };
 
+  const adjustTimeForUTC = (timeString: string): string => {
+    const date = new Date(timeString);
+    date.setHours(date.getHours() + 2);
+    return date.toISOString(); 
+  };
+
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -155,16 +161,22 @@ const Calendar: React.FC = () => {
           throw new Error("No authentication token found.");
         }
 
+        // Ajustamos las horas sumando 2 horas
+        const adjustedStartTime = adjustTimeForUTC(newEventStartTime);
+        const adjustedEndTime = adjustTimeForUTC(newEventEndTime);
+
         const newEvent: Omit<CalendarEvent, 'id' | 'created_at'> = {
           title: newEventTitle,
           content: newEventContent,
           is_completed: false,
           priority: newEventPriority,
-          start_time: newEventStartTime,
-          end_time: newEventEndTime,
+          start_time: adjustedStartTime,
+          end_time: adjustedEndTime,
           id_calendar: 8,
           id_category: 1,
         };
+
+        console.log("Evento a enviar al backend:", newEvent);
 
         const response = await fetch(`${API_BASE_URL}/calendar-task`, {
           method: "POST",
