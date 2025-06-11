@@ -52,6 +52,7 @@ const Calendar: React.FC = () => {
   const [newEventEndHour, setNewEventEndHour] = useState<string>("10:00");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -100,38 +101,21 @@ const Calendar: React.FC = () => {
     fetchEvents();
   }, []);
 
-  const handleEventClick = async (selected: EventClickArg) => {
-    if (
-      window.confirm(
-        `¿Estás seguro de que quieres eliminar el evento "${selected.event.title}"?`
-      )
-    ) {
-      try {
-        const token = localStorage.getItem("tokenWeb");
-        if (!token) {
-          throw new Error("No authentication token found.");
-        }
-
-        const response = await fetch(`${API_BASE_URL}/calendar-task/${selected.event.id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Error al eliminar el evento");
-        }
-
-        // Actualizar la lista de eventos después de eliminar
-        setCurrentEvents((prevEvents) => 
-          prevEvents.filter((event) => event.id !== selected.event.id)
-        );
-      } catch (error) {
-        console.error("Error deleting event:", error);
-        setError(error instanceof Error ? error.message : "Error al eliminar el evento");
-      }
+  const handleEventClick = (selected: EventClickArg) => {
+    // Buscar el evento en currentEvents
+    const event = currentEvents.find(e => e.id === selected.event.id);
+    if (event) {
+      setEditingEventId(event.id);
+      setNewEventTitle(event.title);
+      setNewEventContent(event.extendedProps.content);
+      setNewEventPriority(event.extendedProps.priority);
+      // Fecha y horas
+      const startDate = new Date(event.start);
+      setSelectedDate(new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
+      setNewEventStartHour(startDate.toISOString().slice(11, 16));
+      const endDate = new Date(event.end);
+      setNewEventEndHour(endDate.toISOString().slice(11, 16));
+      setIsDialogOpen(true);
     }
   };
 
@@ -151,7 +135,7 @@ const Calendar: React.FC = () => {
     return date.toISOString(); 
   };
 
-  const handleAddEvent = async (e: React.FormEvent) => {
+  const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newEventTitle && newEventContent && selectedDate && newEventStartHour && newEventEndHour) {
       try {
@@ -160,61 +144,94 @@ const Calendar: React.FC = () => {
         if (!token) {
           throw new Error("No authentication token found.");
         }
-        // Combinar la fecha seleccionada con la hora elegida
         const dateStr = selectedDate.toISOString().slice(0, 10); // yyyy-mm-dd
         const adjustedStartTime = adjustTimeForUTC(`${dateStr}T${newEventStartHour}`);
         const adjustedEndTime = adjustTimeForUTC(`${dateStr}T${newEventEndHour}`);
-        const newEvent: Omit<CalendarEvent, 'id' | 'created_at'> = {
-          title: newEventTitle,
-          content: newEventContent,
-          is_completed: false,
-          priority: newEventPriority,
-          start_time: adjustedStartTime,
-          end_time: adjustedEndTime,
-          id_calendar: 8,
-          id_category: 1,
-        };
-
-        console.log("Evento a enviar al backend:", newEvent);
-
-        const response = await fetch(`${API_BASE_URL}/calendar-task`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newEvent),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Error al crear el evento");
-        }
-
-        const data = await response.json();
-        const createdEvent: CalendarEvent = data.task;
-        if (!createdEvent.id) {
-          setError("Error: The created event does not have a valid ID.");
-          return;
-        }
-        console.log("Created event:", createdEvent);
-
-        const formattedEvent: FormattedEvent = {
-          id: createdEvent.id.toString(),
-          title: createdEvent.title,
-          start: createdEvent.start_time,
-          end: createdEvent.end_time,
-          extendedProps: {
-            content: createdEvent.content,
-            priority: Number(createdEvent.priority),
-            is_completed: createdEvent.is_completed ?? false
+        if (editingEventId) {
+          // PATCH para editar
+          const updatedEvent = {
+            title: newEventTitle,
+            content: newEventContent,
+            priority: newEventPriority,
+            start_time: adjustedStartTime,
+            end_time: adjustedEndTime,
+          };
+          const response = await fetch(`${API_BASE_URL}/calendar-task/${editingEventId}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updatedEvent),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Error updating event");
           }
-        };
-        setCurrentEvents((prevEvents) => [...prevEvents, formattedEvent]);
-        handleCloseDialog();
+          // Actualizar en el estado local
+          setCurrentEvents((prevEvents) => prevEvents.map(ev =>
+            ev.id === editingEventId
+              ? {
+                  ...ev,
+                  title: newEventTitle,
+                  start: adjustedStartTime,
+                  end: adjustedEndTime,
+                  extendedProps: {
+                    ...ev.extendedProps,
+                    content: newEventContent,
+                    priority: newEventPriority,
+                  }
+                }
+              : ev
+          ));
+          handleCloseDialog();
+          setEditingEventId(null);
+        } else {
+          // Crear evento nuevo (POST)
+          const newEvent: Omit<CalendarEvent, 'id' | 'created_at'> = {
+            title: newEventTitle,
+            content: newEventContent,
+            is_completed: false,
+            priority: newEventPriority,
+            start_time: adjustedStartTime,
+            end_time: adjustedEndTime,
+            id_calendar: 8,
+            id_category: 1,
+          };
+          const response = await fetch(`${API_BASE_URL}/calendar-task`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newEvent),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Error al crear el evento");
+          }
+          const data = await response.json();
+          const createdEvent: CalendarEvent = data.task;
+          if (!createdEvent.id) {
+            setError("Error: The created event does not have a valid ID.");
+            return;
+          }
+          const formattedEvent: FormattedEvent = {
+            id: createdEvent.id.toString(),
+            title: createdEvent.title,
+            start: createdEvent.start_time,
+            end: createdEvent.end_time,
+            extendedProps: {
+              content: createdEvent.content,
+              priority: Number(createdEvent.priority),
+              is_completed: createdEvent.is_completed ?? false
+            }
+          };
+          setCurrentEvents((prevEvents) => [...prevEvents, formattedEvent]);
+          handleCloseDialog();
+        }
       } catch (error) {
-        console.error("Error creating event:", error);
-        setError(error instanceof Error ? error.message : "Error al crear el evento");
+        setError(error instanceof Error ? error.message : "Error al guardar el evento");
       }
     }
   };
@@ -222,11 +239,11 @@ const Calendar: React.FC = () => {
   return (
     <div>
       <div className="flex w-full px-10 justify-start items-start gap-8">
-        <div className="w-3/12">
+        <div className="w-3/12 h-[85vh] flex flex-col">
           <div className="py-10 text-2xl font-extrabold px-7">Calendar Events</div>
           {isLoading && <div className="text-center">Cargando eventos...</div>}
           {error && <div className="text-red-500 text-center">{error}</div>}
-          <ul className="space-y-4">
+          <ul className="space-y-4 flex-1 overflow-y-auto">
             {!isLoading && currentEvents.length <= 0 && (
               <div className="italic text-center text-gray-400">
                 No hay eventos programados
@@ -247,6 +264,10 @@ const Calendar: React.FC = () => {
                       month: "short",
                       day: "numeric",
                     })}
+                    {" "}
+                    {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {event.end &&
+                      " - " + new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </label>
                 </li>
               ))}
@@ -275,7 +296,11 @@ const Calendar: React.FC = () => {
               hour12: false
             }}
             select={(info) => {
+              setEditingEventId(null);
               setSelectedDate(info.start);
+              setNewEventTitle("");
+              setNewEventContent("");
+              setNewEventPriority(1);
               setNewEventStartHour("09:00");
               setNewEventEndHour("10:00");
               setIsDialogOpen(true);
@@ -290,9 +315,9 @@ const Calendar: React.FC = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg w-full p-6">
           <DialogHeader>
-            <DialogTitle>Add New Event Details</DialogTitle>
+            <DialogTitle>{editingEventId ? "Edit Event" : "Add New Event Details"}</DialogTitle>
           </DialogHeader>
-          <form className="space-y-4" onSubmit={handleAddEvent}>
+          <form className="space-y-4" onSubmit={handleSaveEvent}>
             {selectedDate && (
               <div className="text-center font-semibold text-lg">
                 {selectedDate.toLocaleDateString()}
@@ -344,7 +369,7 @@ const Calendar: React.FC = () => {
               type="submit"
               className="bg-green-500 text-white p-3 rounded-md w-full"
             >
-              Add Event
+              {editingEventId ? "Save Changes" : "Add Event"}
             </button>
           </form>
         </DialogContent>
