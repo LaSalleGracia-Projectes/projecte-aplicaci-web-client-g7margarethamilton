@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getTokenWeb } from "@/lib/auth";
+import { Trash2 } from "lucide-react";
 
 const API_BASE_URL = "http://localhost:3000/api/v1";
 
@@ -53,6 +54,8 @@ const Calendar: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventIdToDelete, setEventIdToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -253,22 +256,33 @@ const Calendar: React.FC = () => {
             {currentEvents.length > 0 &&
               currentEvents.map((event) => (
                 <li
-                  className="border border-gray-200 shadow px-4 py-2 rounded-md text-blue-800"
+                  className="border border-gray-200 shadow px-4 py-2 rounded-md text-blue-800 flex items-center justify-between"
                   key={event.id}
                 >
-                  {event.title}
-                  <br />
-                  <label className="text-slate-950">
-                    {formatDate(new Date(event.start), {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                    {" "}
-                    {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    {event.end &&
-                      " - " + new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </label>
+                  <div>
+                    {event.title}
+                    <br />
+                    <label className="text-slate-950">
+                      {formatDate(new Date(event.start), {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })} {" "}
+                      {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {event.end &&
+                        " - " + new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </label>
+                  </div>
+                  <button
+                    className="ml-2 text-red-500 hover:text-red-700"
+                    title="Delete event"
+                    onClick={() => {
+                      setEventIdToDelete(event.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </li>
               ))}
           </ul>
@@ -371,7 +385,67 @@ const Calendar: React.FC = () => {
             >
               {editingEventId ? "Save Changes" : "Add Event"}
             </button>
+            {editingEventId && (
+              <button
+                type="button"
+                className="bg-red-500 text-white p-3 rounded-md w-full mt-2"
+                onClick={() => {
+                  setEventIdToDelete(editingEventId);
+                  setDeleteDialogOpen(true);
+                }}
+              >
+                Delete Event
+              </button>
+            )}
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmación de borrado */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md w-full p-6">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <div className="mb-4">Are you sure you want to delete this event? This action cannot be undone.</div>
+          <div className="flex gap-4">
+            <button
+              className="bg-red-500 text-white p-3 rounded-md w-full"
+              onClick={async () => {
+                if (!eventIdToDelete) return;
+                try {
+                  const token = getTokenWeb();
+                  if (!token) throw new Error("No authentication token found.");
+                  const response = await fetch(`${API_BASE_URL}/calendar-task/${eventIdToDelete}`, {
+                    method: "DELETE",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                    },
+                  });
+                  if (!response.ok) throw new Error("Error deleting event");
+                  setCurrentEvents((prevEvents) => prevEvents.filter((event) => event.id !== eventIdToDelete));
+                  setDeleteDialogOpen(false);
+                  setEventIdToDelete(null);
+                  // Si se estaba editando este evento, cerrar el modal de edición
+                  if (editingEventId === eventIdToDelete) {
+                    handleCloseDialog();
+                    setEditingEventId(null);
+                  }
+                } catch (error) {
+                  setError(error instanceof Error ? error.message : "Error deleting event");
+                }
+              }}
+            >
+              Delete
+            </button>
+            <button
+              className="bg-gray-200 text-gray-800 p-3 rounded-md w-full"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
