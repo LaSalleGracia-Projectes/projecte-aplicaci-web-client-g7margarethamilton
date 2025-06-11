@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import {
   format,
@@ -25,236 +24,289 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/app/providers";
-import axios from "axios";
+import supabase from "@/lib/supabase";
 
-// Definición de colores disponibles
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  start_time: Date;
+  end_time: Date;
+  color: string;
+  calendarId: string;
+}
+
+interface Calendar {
+  id: string;
+  title: string;
+  is_favorite: boolean;
+  id_category?: string | null;
+}
+
 const COLOR_OPTIONS = [
-  { value: "blue", label: "Azul", bg: "bg-blue-500", bgLight: "bg-blue-100", text: "text-blue-800" },
-  { value: "red", label: "Rojo", bg: "bg-red-500", bgLight: "bg-red-100", text: "text-red-800" },
-  { value: "green", label: "Verde", bg: "bg-green-500", bgLight: "bg-green-100", text: "text-green-800" },
-  { value: "yellow", label: "Amarillo", bg: "bg-yellow-500", bgLight: "bg-yellow-100", text: "text-yellow-800" },
-  { value: "purple", label: "Morado", bg: "bg-purple-500", bgLight: "bg-purple-100", text: "text-purple-800" },
-  { value: "pink", label: "Rosa", bg: "bg-pink-500", bgLight: "bg-pink-100", text: "text-pink-800" },
-  { value: "indigo", label: "Indigo", bg: "bg-indigo-500", bgLight: "bg-indigo-100", text: "text-indigo-800" },
-];
+  { value: "blue", label: "Azul", bg: "bg-blue-100", bgLight: "bg-blue-100", text: "text-blue-800", categoryId: "1" },
+  { value: "red", label: "Rojo", bg: "bg-red-200", bgLight: "bg-red-100", text: "text-red-600", categoryId: "2" },
+  { value: "green", label: "Verde", bg: "bg-green-200", bgLight: "bg-green-100", text: "text-green-600", categoryId: "3" },
+  { value: "yellow", label: "Amarillo", bg: "bg-yellow-200", bgLight: "bg-yellow-100", text: "text-yellow-600", categoryId: "4" },
+  { value: "purple", label: "Morado", bg: "bg-purple-200", bgLight: "bg-purple-100", text: "text-purple-600", categoryId: "5" },
+  { value: "pink", label: "Rosa", bg: "bg-pink-200", bgLight: "bg-pink-100", text: "text-pink-600", categoryId: "6" },
+  { value: "indigo", label: "Indigo", bg: "bg-indigo-200", bgLight: "bg-indigo-100", text: "text-indigo-600", categoryId: "7" },
+] as const;
 
 type ColorOption = typeof COLOR_OPTIONS[number];
-
-// Configuración del cliente Axios para Supabase
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1",
-  headers: {
-    apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-    "Content-Type": "application/json",
-  },
-});
-
-// Interceptor para añadir email
-api.interceptors.request.use((config) => {
-  const user = localStorage.getItem("user");
-  console.log("Request config:", {
-    fullUrl: `${config.baseURL}${config.url}`,
-    method: config.method,
-    user: user ? JSON.parse(user) : null,
-    headers: config.headers,
-    data: config.data,
-    params: config.params,
-  });
-  if (user) {
-    config.params = { ...config.params, email: `eq.${JSON.parse(user).email}` };
-  }
-  return config;
-});
 
 export default function CalendarPage() {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [events, setEvents] = useState<
-    Array<{
-      id: string;
-      title: string;
-      description: string;
-      date: Date;
-      color: string;
-    }>
-  >([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
-    color: "blue",
+    start_time: new Date().toISOString().slice(0, 16),
+    end_time: new Date().toISOString().slice(0, 16),
+    color: "blue" as ColorOption['value'],
   });
-  const [editingEvent, setEditingEvent] = useState<
-    | {
-        id: string;
-        title: string;
-        description: string;
-        color: string;
-      }
-    | undefined
-  >(undefined);
+  const [newCalendarTitle, setNewCalendarTitle] = useState("");
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [calendarId, setCalendarId] = useState<number | null>(null);
 
-  // Crear calendario por defecto
-  const createDefaultCalendar = async () => {
-    try {
-      console.log("Creating default calendar for email:", user?.email);
-      const response = await api.post("/calendar", {
-        title: "Default Calendar",
-        is_favorite: false,
-        id_category: null,
-        email: user?.email,
-      }, {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json",
-        },
-      });
-      console.log("Default calendar created:", response.data);
-      return response.data[0]?.id;
-    } catch (err: any) {
-      console.error("Create calendar error:", {
-        status: err.response?.status,
-        data: err.response?.data || {},
-        message: err.message,
-        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
-      });
-      throw new Error(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.response?.data?.hint ||
-        "Error al crear calendario: verifica las políticas de acceso o los datos enviados"
-      );
-    }
+  // Inicializa el formulario de nueva tarea con la fecha seleccionada
+  const openNewTaskDialog = () => {
+    const baseDate = selectedDate || new Date();
+    const iso = baseDate.toISOString().slice(0, 16);
+    setNewEvent({
+      title: "",
+      description: "",
+      start_time: iso,
+      end_time: iso,
+      color: "blue",
+    });
   };
 
-  // Fetch user's calendars
   useEffect(() => {
     if (!user?.email) {
-      setError("Por favor, inicia sesión para ver el calendario.");
+      setError("Debes iniciar sesión para ver tus calendarios");
       return;
     }
 
-    const fetchCalendars = async () => {
+    const loadCalendars = async () => {
       setIsLoading(true);
+      setError(null);
       try {
-        console.log("Fetching calendars from:", `${api.defaults.baseURL}/calendar`, {
-          userEmail: user.email,
-        });
-        const response = await api.get("/calendar", {
-          params: {
-            email: `eq.${user.email}`,
-            select: "id,title,is_favorite,id_category",
-          },
-        });
-        console.log("Calendars response:", response.data);
-        let calendars = response.data;
-        if (calendars.length > 0) {
-          setCalendarId(calendars[0].id);
-        } else {
-          const newCalendarId = await createDefaultCalendar();
-          setCalendarId(newCalendarId);
+        const { data, error } = await supabase
+          .from("calendar")
+          .select("id,title,is_favorite,id_category")
+          .eq("email", user.email);
+        if (error) throw error;
+        setCalendars(data || []);
+        if (data?.length > 0) {
+          setSelectedCalendarId(data[0].id);
         }
       } catch (err: any) {
-        console.error("Calendar fetch error:", {
-          status: err.response?.status,
-          data: err.response?.data || {},
-          message: err.message,
-          details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
-        });
-        setError(
-          err.response?.status === 400
-            ? "Solicitud inválida. Verifica tu cuenta o intenta de nuevo."
-            : err.response?.status === 403
-            ? "Acceso denegado: verifica las políticas de acceso en Supabase."
-            : err.response?.status === 404
-            ? "No se encontraron calendarios."
-            : err.response?.data?.message ||
-              err.response?.data?.error ||
-              err.response?.data?.hint ||
-              "Error al cargar calendarios"
-        );
+        setError(err.message || "Error al cargar los calendarios");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchCalendars();
+    loadCalendars();
   }, [user]);
 
-  // Fetch tasks
   useEffect(() => {
-    if (!calendarId || !user?.email) return;
+    if (!selectedCalendarId) return;
 
-    const fetchTasks = async () => {
+    const loadEvents = async () => {
       setIsLoading(true);
+      setError(null);
       try {
-        console.log("Fetching tasks from:", `${api.defaults.baseURL}/calendar_task`, {
-          calendarId,
-          userEmail: user.email,
-        });
-        const response = await api.get("/calendar_task", {
-          params: {
-            id_calendar: `eq.${calendarId}`,
-            select: "id,title,content,start_time",
-          },
-        });
-        console.log("Tasks response:", response.data);
-        const tasks = response.data;
-        const formattedEvents = tasks.map((task: any) => {
-          let description = task.content;
-          let color = "blue";
+        const { data, error } = await supabase
+          .from("calendar_task")
+          .select("id,title,content,start_time,end_time,id_calendar")
+          .eq("id_calendar", selectedCalendarId)
+          .order("start_time", { ascending: true });
+        if (error) throw error;
+        const formattedEvents = data.map(task => {
           try {
-            const parsedContent = JSON.parse(task.content);
-            description = parsedContent.description || "";
-            color = parsedContent.color || "blue";
+            const content = JSON.parse(task.content);
+            return {
+              id: task.id.toString(),
+              title: task.title,
+              description: content.description || "",
+              start_time: new Date(task.start_time),
+              end_time: new Date(task.end_time),
+              color: content.color || "blue",
+              calendarId: task.id_calendar.toString(),
+            };
           } catch {
-            description = task.content || "";
+            return {
+              id: task.id.toString(),
+              title: task.title,
+              description: task.content || "",
+              start_time: new Date(task.start_time),
+              end_time: new Date(task.end_time),
+              color: "blue",
+              calendarId: task.id_calendar.toString(),
+            };
           }
-          return {
-            id: task.id.toString(),
-            title: task.title,
-            description,
-            date: new Date(task.start_time),
-            color,
-          };
         });
-        console.log("Formatted events:", formattedEvents);
         setEvents(formattedEvents);
       } catch (err: any) {
-        console.error("Task fetch error:", {
-          status: err.response?.status,
-          data: err.response?.data || {},
-          message: err.message,
-          details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
-        });
-        setError(
-          err.response?.status === 400
-            ? "Solicitud inválida. Verifica el calendario o intenta de nuevo."
-            : err.response?.status === 403
-            ? "Acceso denegado: verifica las políticas de acceso en Supabase."
-            : err.response?.status === 404
-            ? "No se encontraron tareas."
-            : err.response?.data?.message ||
-              err.response?.data?.error ||
-              err.response?.data?.hint ||
-              "Error al cargar tareas"
-        );
+        setError(err.message || "Error al cargar los eventos");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchTasks();
-  }, [calendarId, user]);
+    loadEvents();
+  }, [selectedCalendarId]);
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const createCalendar = async () => {
+    if (!newCalendarTitle || !user?.email) {
+      setError("Falta el título del calendario o el email del usuario");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("calendar")
+        .insert([{ title: newCalendarTitle, is_favorite: false, email: user.email }])
+        .select("id,title,is_favorite,id_category");
+      if (error) throw error;
+      const newCalendar = data[0];
+      setCalendars(prev => [...prev, newCalendar]);
+      setSelectedCalendarId(newCalendar.id);
+      setNewCalendarTitle("");
+    } catch (err: any) {
+      setError(err.message || "No se pudo crear el calendario");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!newEvent.title || !selectedCalendarId || !newEvent.start_time || !newEvent.end_time) {
+      setError("Faltan datos requeridos (título, fechas o calendario)");
+      return;
+    }
+    if (new Date(newEvent.end_time) < new Date(newEvent.start_time)) {
+      setError("La fecha de fin debe ser posterior a la de inicio");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("calendar_task")
+        .insert([{
+          title: newEvent.title,
+          content: JSON.stringify({
+            description: newEvent.description,
+            color: newEvent.color,
+          }),
+          start_time: newEvent.start_time + ":00.000Z",
+          end_time: newEvent.end_time + ":00.000Z",
+          id_calendar: selectedCalendarId,
+          id_category: null,
+          is_completed: false,
+          priority: 1,
+        }])
+        .select("id,title,content,start_time,end_time,id_calendar");
+      if (error) throw error;
+      const newTask = data[0];
+      setEvents(prev => [...prev, {
+        id: newTask.id.toString(),
+        title: newTask.title,
+        description: JSON.parse(newTask.content).description || "",
+        start_time: new Date(newTask.start_time),
+        end_time: new Date(newTask.end_time),
+        color: JSON.parse(newTask.content).color || "blue",
+        calendarId: newTask.id_calendar.toString(),
+      }]);
+      setNewEvent({
+        title: "",
+        description: "",
+        start_time: new Date().toISOString().slice(0, 16),
+        end_time: new Date().toISOString().slice(0, 16),
+        color: "blue",
+      });
+    } catch (err: any) {
+      setError(err.message || "Error al crear el evento");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!editingEvent || !selectedCalendarId || !editingEvent.start_time || !editingEvent.end_time) {
+      setError("Faltan datos requeridos (título, fechas o calendario)");
+      return;
+    }
+    if (new Date(editingEvent.end_time) < new Date(editingEvent.start_time)) {
+      setError("La fecha de fin debe ser posterior a la de inicio");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("calendar_task")
+        .update({
+          title: editingEvent.title,
+          content: JSON.stringify({
+            description: editingEvent.description,
+            color: editingEvent.color,
+          }),
+          start_time: new Date(editingEvent.start_time).toISOString(),
+          end_time: new Date(editingEvent.end_time).toISOString(),
+          id_category: null,
+        })
+        .eq("id", editingEvent.id)
+        .eq("id_calendar", selectedCalendarId)
+        .select("id,title,content,start_time,end_time,id_calendar");
+      if (error) throw error;
+      const updatedTask = data[0];
+      setEvents(prev => prev.map(ev =>
+        ev.id === editingEvent.id ? {
+          ...ev,
+          title: updatedTask.title,
+          description: JSON.parse(updatedTask.content).description || "",
+          start_time: new Date(updatedTask.start_time),
+          end_time: new Date(updatedTask.end_time),
+          color: JSON.parse(updatedTask.content).color || "blue",
+        } : ev
+      ));
+      setEditingEvent(null);
+    } catch (err: any) {
+      setError(err.message || "Error al actualizar el evento");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase
+        .from("calendar_task")
+        .delete()
+        .eq("id", id)
+        .eq("id_calendar", selectedCalendarId);
+      if (error) throw error;
+      setEvents(prev => prev.filter(ev => ev.id !== id));
+    } catch (err: any) {
+      setError(err.message || "Error al eliminar el evento");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -264,387 +316,172 @@ export default function CalendarPage() {
     setSelectedDate(today);
   };
 
-  const handleCreateEvent = async () => {
-    if (!selectedDate || !newEvent.title || !calendarId || !user?.email) return;
-
-    setIsLoading(true);
-    try {
-      const taskData = {
-        title: newEvent.title,
-        content: JSON.stringify({
-          description: newEvent.description,
-          color: newEvent.color,
-        }),
-        is_completed: false,
-        priority: 1,
-        start_time: selectedDate.toISOString(),
-        end_time: selectedDate.toISOString(),
-        id_calendar: calendarId,
-        id_category: null,
-      };
-      console.log("Creating task:", taskData);
-      const response = await api.post("/calendar_task", taskData);
-      const task = response.data[0];
-      setEvents([
-        ...events,
-        {
-          id: task.id.toString(),
-          title: task.title,
-          description: newEvent.description,
-          date: new Date(task.start_time),
-          color: newEvent.color,
-        },
-      ]);
-      setNewEvent({ title: "", description: "", color: "blue" });
-    } catch (err: any) {
-      console.error("Create task error:", {
-        status: err.response?.status,
-        data: err.response?.data || {},
-        message: err.message,
-        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
-      });
-      setError(
-        err.response?.status === 400
-          ? "Solicitud inválida. Verifica los datos de la tarea."
-          : err.response?.status === 403
-          ? "Acceso denegado: verifica las políticas de acceso en Supabase."
-          : err.response?.status === 404
-          ? "No se pudo crear la tarea."
-          : err.response?.data?.message ||
-            err.response?.data?.error ||
-            err.response?.data?.hint ||
-            "Error al crear tarea"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUpdateEvent = async () => {
-    if (!editingEvent || !selectedDate || !calendarId || !user?.email) return;
-
-    setIsLoading(true);
-    try {
-      const taskData = {
-        title: editingEvent.title,
-        content: JSON.stringify({
-          description: editingEvent.description,
-          color: editingEvent.color,
-        }),
-        is_completed: false,
-        priority: 1,
-        start_time: selectedDate.toISOString(),
-        end_time: selectedDate.toISOString(),
-        id_calendar: calendarId,
-      };
-      console.log("Updating task:", taskData);
-      const response = await api.patch(`/calendar_task?id=eq.${editingEvent.id}`, taskData);
-      const task = response.data[0];
-      setEvents((prevEvents) =>
-        prevEvents.map((event) =>
-          event.id === editingEvent.id
-            ? {
-                id: event.id,
-                title: task.title,
-                description: editingEvent.description,
-                date: new Date(task.start_time),
-                color: editingEvent.color,
-              }
-            : event
-        )
-      );
-      setEditingEvent(null);
-    } catch (err: any) {
-      console.error("Update task error:", {
-        status: err.response?.status,
-        data: err.response?.data || {},
-        message: err.message,
-        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
-      });
-      setError(
-        err.response?.status === 400
-          ? "Solicitud inválida. Verifica los datos de la tarea."
-          : err.response?.status === 403
-          ? "Acceso denegado: verifica las políticas de acceso en Supabase."
-          : err.response?.status === 404
-          ? "No se pudo actualizar la tarea."
-          : err.response?.data?.message ||
-            err.response?.data?.error ||
-            err.response?.data?.hint ||
-            "Error al actualizar tarea"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteEvent = async (id: string) => {
-    if (!user?.email) return;
-
-    setIsLoading(true);
-    try {
-      console.log("Deleting task:", id);
-      await api.delete(`/calendar_task?id=eq.${id}&id_calendar=eq.${calendarId}`);
-      setEvents((events) => events.filter((event) => event.id !== id));
-    } catch (err: any) {
-      console.error("Delete task error:", {
-        status: err.response?.status,
-        data: err.response?.data || {},
-        message: err.message,
-        details: err.response?.data?.message || err.response?.data?.error || err.response?.data?.hint || "Unknown error",
-      });
-      setError(
-        err.response?.status === 400
-          ? "Solicitud inválida. Verifica la tarea."
-          : err.response?.status === 403
-          ? "Acceso denegado: verifica las políticas de acceso en Supabase."
-          : err.response?.status === 404
-          ? "No se pudo eliminar la tarea."
-          : err.response?.data?.message ||
-            err.response?.data?.error ||
-            err.response?.data?.hint ||
-            "Error al eliminar tarea"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const getEventsForDay = (day: Date) => {
-    return events.filter((event) => isSameDay(event.date, day));
+    return events.filter(event => isSameDay(event.start_time, day));
   };
 
   const getColorClass = (colorValue: string): ColorOption => {
-    return COLOR_OPTIONS.find((c) => c.value === colorValue) || COLOR_OPTIONS[0];
+    return COLOR_OPTIONS.find(c => c.value === colorValue) || COLOR_OPTIONS[0];
   };
+
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  if (!isLoading && calendars.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex justify-center items-center py-12 px-4">
+          <div className="w-full max-w-md text-center space-y-6">
+            <h1 className="text-2xl font-bold">No tienes calendarios</h1>
+            <p className="text-muted-foreground">Crea tu primer calendario para empezar a organizar tus tareas.</p>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="lg" className="gap-2">
+                  <Plus className="h-5 w-5" />
+                  Crear nuevo calendario
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Crear nuevo calendario</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <Input
+                    placeholder="Nombre del calendario"
+                    value={newCalendarTitle}
+                    onChange={(e) => setNewCalendarTitle(e.target.value)}
+                  />
+                  <Button
+                    onClick={createCalendar}
+                    disabled={!newCalendarTitle || isLoading}
+                  >
+                    {isLoading ? "Creando..." : "Crear calendario"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            {error && (
+              <div className="bg-red-100 text-red-800 p-4 rounded-md">
+                {error}
+              </div>
+            )}
+          </div>
+        </main>
+        <footer className="bg-secondary py-8 text-center w-full">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Flow2Day - Hecho con ❤️ y Next.js
+          </p>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 flex justify-center py-12 px-4">
         <div className="w-full max-w-4xl flex flex-col gap-8">
-          {/* Mostrar errores */}
           {error && (
-            <div className="bg-red-100 text-red-800 p-4">
+            <div className="bg-red-100 text-red-800 p-4 rounded-md">
               {error}
             </div>
           )}
-          {isLoading && <p className="text-center">Cargando...</p>}
-
-          {/* Header centrado */}
           <div className="flex flex-col items-center gap-4">
             <h1 className="text-3xl font-bold">
               {format(currentDate, "MMMM yyyy")}
             </h1>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handlePrevMonth}
-                disabled={isLoading}
-              >
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="icon" onClick={handlePrevMonth} disabled={isLoading}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleNextMonth}
-                disabled={isLoading}
-              >
+              <Button variant="outline" size="icon" onClick={handleNextMonth} disabled={isLoading}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleToday}
-                disabled={isLoading}
-              >
+              <Button variant="outline" size="sm" onClick={handleToday} disabled={isLoading}>
                 Hoy
               </Button>
+              <select
+                value={selectedCalendarId || ""}
+                onChange={(e) => setSelectedCalendarId(e.target.value)}
+                className="p-2 border rounded text-sm"
+                disabled={isLoading}
+              >
+                {calendars.map(calendar => (
+                  <option key={calendar.id} value={calendar.id}>
+                    {calendar.title}
+                  </option>
+                ))}
+              </select>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2" disabled={isLoading || !calendarId || !user}>
+                  <Button size="sm" className="gap-2" disabled={isLoading}>
                     <Plus className="h-4 w-4" />
-                    Nueva tarea
+                    Nuevo calendario
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>
-                      Crear nueva tarea para{" "}
-                      {selectedDate && format(selectedDate, "PPPP")}
-                    </DialogTitle>
+                    <DialogTitle>Crear nuevo calendario</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Input
-                        placeholder="Título de la tarea"
-                        value={newEvent.title}
-                        onChange={(e) =>
-                          setNewEvent({ ...newEvent, title: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Textarea
-                        placeholder="Descripción"
-                        value={newEvent.description}
-                        onChange={(e) =>
-                          setNewEvent({ ...newEvent, description: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium">Color</label>
-                      <div className="flex flex-wrap gap-2">
-                        {COLOR_OPTIONS.map((color) => (
-                          <button
-                            key={color.value}
-                            type="button"
-                            className={cn(
-                              "w-6 h-6 rounded-full border",
-                              newEvent.color === color.value
-                                ? "ring-2 ring-offset-2 ring-primary"
-                                : "border-gray-300",
-                              color.bg
-                            )}
-                            onClick={() => {
-                              setNewEvent((prev) => ({ ...prev, color: color.value }));
-                              console.log("Color seleccionado (crear):", color.value);
-                            }}
-                            title={color.label}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                    <Input
+                      placeholder="Nombre del calendario"
+                      value={newCalendarTitle}
+                      onChange={(e) => setNewCalendarTitle(e.target.value)}
+                    />
                     <Button
-                      type="submit"
-                      onClick={handleCreateEvent}
-                      disabled={!newEvent.title || isLoading || !calendarId || !user}
+                      onClick={createCalendar}
+                      disabled={!newCalendarTitle || isLoading}
                     >
-                      {isLoading ? "Creando..." : "Crear tarea"}
+                      {isLoading ? "Creando..." : "Crear calendario"}
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
-
-          {/* Días de la semana */}
-          <div className="grid grid-cols-7 gap-1">
-            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
-              <div
-                key={day}
-                className="text-center font-medium text-sm text-muted-foreground"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Días del mes */}
-          <div className="grid grid-cols-7 gap-1">
-            {daysInMonth.map((day) => {
-              const isSelected = selectedDate && isSameDay(day, selectedDate);
-              const isToday = isSameDay(day, new Date());
-              const dayEvents = getEventsForDay(day);
-
-              return (
-                <div
-                  key={day.toString()}
-                  onClick={() => setSelectedDate(day)}
-                  className={cn(
-                    "h-24 p-2 border rounded-md cursor-pointer transition-colors",
-                    isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-accent",
-                    !isSameMonth(day, currentDate) &&
-                      "text-muted-foreground opacity-50",
-                    isToday && !isSelected && "border-primary"
-                  )}
-                >
-                  <div className="flex justify-between">
-                    <span
-                      className={cn(
-                        "text-sm",
-                        isToday && !isSelected && "font-bold"
-                      )}
-                    >
-                      {format(day, "d")}
-                    </span>
-                    {isToday && (
-                      <span className="h-2 w-2 rounded-full bg-primary"></span>
-                    )}
-                  </div>
-                  <div className="mt-1 space-y-1">
-                    {dayEvents.slice(0, 2).map((event) => {
-                      const color = getColorClass(event.color);
-                      return (
-                        <div
-                          key={event.id}
-                          className={cn(
-                            "text-xs p-1 rounded truncate",
-                            color.bgLight,
-                            color.text
-                          )}
-                        >
-                          {event.title}
-                        </div>
-                      );
-                    })}
-                    {dayEvents.length > 2 && (
-                      <div className="text-xs text-muted-foreground text-center">
-                        +{dayEvents.length - 2} más
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Lista de eventos del día seleccionado */}
-          {selectedDate && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">
-                  Eventos para {format(selectedDate, "PPPP")}
-                </h2>
+              {selectedCalendarId && (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button
                       size="sm"
-                      variant="outline"
                       className="gap-2"
-                      disabled={isLoading || !calendarId || !user}
+                      disabled={isLoading}
+                      onClick={openNewTaskDialog}
                     >
                       <Plus className="h-4 w-4" />
-                      Añadir tarea
+                      Nueva tarea
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>
-                        Crear nueva tarea para {format(selectedDate, "PPPP")}
-                      </DialogTitle>
+                      <DialogTitle>Crear nueva tarea</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
+                      <Input
+                        placeholder="Título de la tarea"
+                        value={newEvent.title}
+                        onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                      />
+                      <Textarea
+                        placeholder="Descripción"
+                        value={newEvent.description}
+                        onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
+                      />
                       <div className="grid gap-2">
+                        <label className="text-sm font-medium">Fecha y hora de inicio</label>
                         <Input
-                          placeholder="Título de la tarea"
-                          value={newEvent.title}
-                          onChange={(e) =>
-                            setNewEvent({ ...newEvent, title: e.target.value })
-                          }
+                          type="datetime-local"
+                          value={newEvent.start_time}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, start_time: e.target.value }))}
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Textarea
-                          placeholder="Descripción"
-                          value={newEvent.description}
-                          onChange={(e) =>
-                            setNewEvent({ ...newEvent, description: e.target.value })
-                          }
+                        <label className="text-sm font-medium">Fecha y hora de fin</label>
+                        <Input
+                          type="datetime-local"
+                          value={newEvent.end_time}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, end_time: e.target.value }))}
                         />
                       </div>
                       <div className="grid gap-2">
@@ -661,61 +498,184 @@ export default function CalendarPage() {
                                   : "border-gray-300",
                                 color.bg
                               )}
-                              onClick={() => {
-                                setNewEvent((prev) => ({ ...prev, color: color.value }));
-                                console.log("Color seleccionado (crear):", color.value);
-                              }}
+                              onClick={() => setNewEvent(prev => ({ ...prev, color: color.value }))}
                               title={color.label}
                             />
                           ))}
                         </div>
                       </div>
                       <Button
-                        type="submit"
                         onClick={handleCreateEvent}
-                        disabled={!newEvent.title || isLoading || !calendarId || !user}
+                        disabled={!newEvent.title || !newEvent.start_time || !newEvent.end_time || isLoading}
                       >
                         {isLoading ? "Creando..." : "Crear tarea"}
                       </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
+              <div key={day} className="text-center font-medium text-sm text-muted-foreground">
+                {day}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {daysInMonth.map((day) => {
+              const isSelected = isSameDay(day, selectedDate);
+              const isToday = isSameDay(day, new Date());
+              const dayEvents = getEventsForDay(day);
+              return (
+                <div
+                  key={day.toString()}
+                  onClick={() => setSelectedDate(day)}
+                  className={cn(
+                    "h-24 p-2 border rounded-md cursor-pointer transition-colors",
+                    isSelected
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-accent",
+                    !isSameMonth(day, currentDate) && "text-muted-foreground opacity-50",
+                    isToday && !isSelected && "border-primary"
+                  )}
+                >
+                  <div className="flex justify-between">
+                    <span className={cn("text-sm", isToday && !isSelected && "font-bold")}>
+                      {format(day, "d")}
+                    </span>
+                    {isToday && <span className="h-2 w-2 rounded-full bg-primary"></span>}
+                  </div>
+                  <div className="mt-1 space-y-1">
+                    {dayEvents.slice(0, 2).map((event) => {
+                      const color = getColorClass(event.color);
+                      return (
+                        <div
+                          key={event.id}
+                          className={cn("text-xs p-1 rounded truncate", color.bgLight, color.text)}
+                        >
+                          {event.title}
+                        </div>
+                      );
+                    })}
+                    {dayEvents.length > 2 && (
+                      <div className="text-xs text-muted-foreground text-center">
+                        +{dayEvents.length - 2} más
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {selectedDate && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  Eventos para {format(selectedDate, "PPPP")}
+                </h2>
+                {selectedCalendarId && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        disabled={isLoading}
+                        onClick={openNewTaskDialog}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Añadir tarea
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Crear nueva tarea</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <Input
+                          placeholder="Título de la tarea"
+                          value={newEvent.title}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                        />
+                        <Textarea
+                          placeholder="Descripción"
+                          value={newEvent.description}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
+                        />
+                        <div className="grid gap-2">
+                          <label className="text-sm font-medium">Fecha y hora de inicio</label>
+                          <Input
+                            type="datetime-local"
+                            value={newEvent.start_time}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, start_time: e.target.value }))}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <label className="text-sm font-medium">Fecha y hora de fin</label>
+                          <Input
+                            type="datetime-local"
+                            value={newEvent.end_time}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, end_time: e.target.value }))}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <label className="text-sm font-medium">Color</label>
+                          <div className="flex flex-wrap gap-2">
+                            {COLOR_OPTIONS.map((color) => (
+                              <button
+                                key={color.value}
+                                type="button"
+                                className={cn(
+                                  "w-6 h-6 rounded-full border",
+                                  newEvent.color === color.value
+                                    ? "ring-2 ring-offset-2 ring-primary"
+                                    : "border-gray-300",
+                                  color.bg
+                                )}
+                                onClick={() => setNewEvent(prev => ({ ...prev, color: color.value }))}
+                                title={color.label}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <Button
+                          onClick={handleCreateEvent}
+                          disabled={!newEvent.title || !newEvent.start_time || !newEvent.end_time || isLoading}
+                        >
+                          {isLoading ? "Creando..." : "Crear tarea"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
               <div className="space-y-2">
                 {getEventsForDay(selectedDate).length > 0 ? (
                   getEventsForDay(selectedDate).map((event) => {
                     const color = getColorClass(event.color);
                     return (
-                      <div
-                        key={event.id}
-                        className="flex items-start p-4 border rounded-lg"
-                      >
+                      <div key={event.id} className="flex items-start p-4 border rounded-lg">
                         <div className={`flex-shrink-0 w-2 h-full rounded ${color.bg}`}></div>
                         <div className="ml-4 flex-1">
                           <div className="flex items-center justify-between">
                             <h3 className="font-medium">{event.title}</h3>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">
-                                {color.label}
-                              </span>
+                              <span className="text-sm text-muted-foreground">{color.label}</span>
                               <Dialog
                                 open={editingEvent?.id === event.id}
-                                onOpenChange={(open) => {
-                                  if (!open) setEditingEvent(null);
-                                }}
+                                onOpenChange={(open) => !open && setEditingEvent(null)}
                               >
                                 <DialogTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() =>
-                                      setEditingEvent({
-                                        id: event.id,
-                                        title: event.title,
-                                        description: event.description,
-                                        color: event.color,
-                                      })
-                                    }
+                                    onClick={() => setEditingEvent({
+                                      ...event,
+                                      start_time: event.start_time.toISOString().slice(0, 16),
+                                      end_time: event.end_time.toISOString().slice(0, 16),
+                                    })}
                                     disabled={isLoading}
                                   >
                                     <Edit className="h-4 w-4" />
@@ -723,34 +683,33 @@ export default function CalendarPage() {
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[80vh] overflow-y-auto">
                                   <DialogHeader>
-                                    <DialogTitle>
-                                      Editar tarea para{" "}
-                                      {format(selectedDate, "PPPP")}
-                                    </DialogTitle>
+                                    <DialogTitle>Editar tarea</DialogTitle>
                                   </DialogHeader>
                                   <div className="grid gap-4 py-4">
+                                    <Input
+                                      placeholder="Título"
+                                      value={editingEvent?.title || ""}
+                                      onChange={(e) => editingEvent && setEditingEvent({ ...editingEvent, title: e.target.value })}
+                                    />
+                                    <Textarea
+                                      placeholder="Descripción"
+                                      value={editingEvent?.description || ""}
+                                      onChange={(e) => editingEvent && setEditingEvent({ ...editingEvent, description: e.target.value })}
+                                    />
                                     <div className="grid gap-2">
+                                      <label className="text-sm font-medium">Fecha y hora de inicio</label>
                                       <Input
-                                        placeholder="Título de la tarea"
-                                        value={editingEvent?.title || ""}
-                                        onChange={(e) =>
-                                          setEditingEvent({
-                                            ...editingEvent!,
-                                            title: e.target.value,
-                                          })
-                                        }
+                                        type="datetime-local"
+                                        value={editingEvent?.start_time || ""}
+                                        onChange={(e) => editingEvent && setEditingEvent({ ...editingEvent, start_time: e.target.value })}
                                       />
                                     </div>
                                     <div className="grid gap-2">
-                                      <Textarea
-                                        placeholder="Descripción"
-                                        value={editingEvent?.description || ""}
-                                        onChange={(e) =>
-                                          setEditingEvent({
-                                            ...editingEvent!,
-                                            description: e.target.value,
-                                          })
-                                        }
+                                      <label className="text-sm font-medium">Fecha y hora de fin</label>
+                                      <Input
+                                        type="datetime-local"
+                                        value={editingEvent?.end_time || ""}
+                                        onChange={(e) => editingEvent && setEditingEvent({ ...editingEvent, end_time: e.target.value })}
                                       />
                                     </div>
                                     <div className="grid gap-2">
@@ -767,22 +726,15 @@ export default function CalendarPage() {
                                                 : "border-gray-300",
                                               color.bg
                                             )}
-                                            onClick={() => {
-                                              setEditingEvent((prev) => ({
-                                                ...prev!,
-                                                color: color.value,
-                                              }));
-                                              console.log("Color seleccionado (editar):", color.value);
-                                            }}
+                                            onClick={() => editingEvent && setEditingEvent({ ...editingEvent, color: color.value })}
                                             title={color.label}
                                           />
                                         ))}
                                       </div>
                                     </div>
                                     <Button
-                                      type="submit"
                                       onClick={handleUpdateEvent}
-                                      disabled={!editingEvent?.title || isLoading}
+                                      disabled={!editingEvent?.title || !editingEvent?.start_time || !editingEvent?.end_time || isLoading}
                                     >
                                       {isLoading ? "Guardando..." : "Guardar cambios"}
                                     </Button>
@@ -799,8 +751,11 @@ export default function CalendarPage() {
                               </Button>
                             </div>
                           </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {format(event.start_time, "PPPP p")} - {format(event.end_time, "PPPP p")}
+                          </p>
                           {event.description && (
-                            <p className="text-blue-600 text-sm mt-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                               {event.description}
                             </p>
                           )}
@@ -818,7 +773,6 @@ export default function CalendarPage() {
           )}
         </div>
       </main>
-
       <footer className="bg-secondary py-8 text-center w-full">
         <p className="text-sm text-muted-foreground">
           © {new Date().getFullYear()} Flow2Day - Hecho con ❤️ y Next.js
