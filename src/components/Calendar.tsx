@@ -147,20 +147,38 @@ const Calendar: React.FC = () => {
         if (!token) {
           throw new Error("No authentication token found.");
         }
-        const dateStr = selectedDate.toISOString().slice(0, 10); // yyyy-mm-dd
-        const adjustedStartTime = adjustTimeForUTC(`${dateStr}T${newEventStartHour}`);
-        const adjustedEndTime = adjustTimeForUTC(`${dateStr}T${newEventEndHour}`);
+        
+        // Crear las fechas usando la fecha local seleccionada
+        const [startHours, startMinutes] = newEventStartHour.split(':').map(Number);
+        const [endHours, endMinutes] = newEventEndHour.split(':').map(Number);
+        
+        const startDate = new Date(selectedDate);
+        startDate.setHours(startHours, startMinutes, 0, 0);
+        
+        const endDate = new Date(selectedDate);
+        endDate.setHours(endHours, endMinutes, 0, 0);
+        
+        // Ajustar las horas para UTC
+        const adjustedStartTime = adjustTimeForUTC(startDate.toISOString());
+        const adjustedEndTime = adjustTimeForUTC(endDate.toISOString());
+
         if (editingEventId) {
-          // PATCH para editar
+          // PUT para editar (enviar todos los campos requeridos)
+          // Buscar el evento original para obtener los campos que no se editan en el modal
+          const originalEvent = currentEvents.find(ev => ev.id === editingEventId);
           const updatedEvent = {
             title: newEventTitle,
             content: newEventContent,
+            is_completed: originalEvent ? originalEvent.extendedProps.is_completed : false,
             priority: newEventPriority,
             start_time: adjustedStartTime,
             end_time: adjustedEndTime,
+            id_calendar: 8,
+            id_category: 1, 
+            userId: localStorage.getItem('userEmail') || ""
           };
           const response = await fetch(`${API_BASE_URL}/calendar-task/${editingEventId}`, {
-            method: "PATCH",
+            method: "PUT",
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
