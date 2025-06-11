@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { formatDate, DateSelectArg, EventClickArg } from "@fullcalendar/core";
+import { formatDate, EventClickArg } from "@fullcalendar/core";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -47,9 +47,9 @@ const Calendar: React.FC = () => {
   const [newEventTitle, setNewEventTitle] = useState<string>("");
   const [newEventContent, setNewEventContent] = useState<string>("");
   const [newEventPriority, setNewEventPriority] = useState<number>(1);
-  const [newEventStartTime, setNewEventStartTime] = useState<string>("");
-  const [newEventEndTime, setNewEventEndTime] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<DateSelectArg | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [newEventStartHour, setNewEventStartHour] = useState<string>("09:00");
+  const [newEventEndHour, setNewEventEndHour] = useState<string>("10:00");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -140,8 +140,9 @@ const Calendar: React.FC = () => {
     setNewEventTitle("");
     setNewEventContent("");
     setNewEventPriority(1);
-    setNewEventStartTime("");
-    setNewEventEndTime("");
+    setSelectedDate(null);
+    setNewEventStartHour("09:00");
+    setNewEventEndHour("10:00");
   };
 
   const adjustTimeForUTC = (timeString: string): string => {
@@ -152,19 +153,17 @@ const Calendar: React.FC = () => {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (newEventTitle && newEventContent && newEventStartTime && newEventEndTime) {
+    if (newEventTitle && newEventContent && selectedDate && newEventStartHour && newEventEndHour) {
       try {
         setError(null);
         const token = getTokenWeb();
         if (!token) {
           throw new Error("No authentication token found.");
         }
-
-        // Ajustamos las horas sumando 2 horas
-        const adjustedStartTime = adjustTimeForUTC(newEventStartTime);
-        const adjustedEndTime = adjustTimeForUTC(newEventEndTime);
-
+        // Combinar la fecha seleccionada con la hora elegida
+        const dateStr = selectedDate.toISOString().slice(0, 10); // yyyy-mm-dd
+        const adjustedStartTime = adjustTimeForUTC(`${dateStr}T${newEventStartHour}`);
+        const adjustedEndTime = adjustTimeForUTC(`${dateStr}T${newEventEndHour}`);
         const newEvent: Omit<CalendarEvent, 'id' | 'created_at'> = {
           title: newEventTitle,
           content: newEventContent,
@@ -276,7 +275,9 @@ const Calendar: React.FC = () => {
               hour12: false
             }}
             select={(info) => {
-              setSelectedDate(info);
+              setSelectedDate(info.start);
+              setNewEventStartHour("09:00");
+              setNewEventEndHour("10:00");
               setIsDialogOpen(true);
             }}
             eventClick={handleEventClick}
@@ -287,11 +288,16 @@ const Calendar: React.FC = () => {
 
       {/* Dialog for adding new events */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg w-full p-6">
           <DialogHeader>
             <DialogTitle>Add New Event Details</DialogTitle>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleAddEvent}>
+            {selectedDate && (
+              <div className="text-center font-semibold text-lg">
+                {selectedDate.toLocaleDateString()}
+              </div>
+            )}
             <input
               type="text"
               placeholder="Event Title"
@@ -315,20 +321,20 @@ const Calendar: React.FC = () => {
               required
               className="border border-gray-200 p-3 rounded-md text-lg w-full"
             />
-            <div className="flex gap-4">
+            <div className="flex gap-4 w-full">
               <input
-                type="datetime-local"
-                value={newEventStartTime}
-                onChange={(e) => setNewEventStartTime(e.target.value)}
+                type="time"
+                value={newEventStartHour}
+                onChange={(e) => setNewEventStartHour(e.target.value)}
                 required
-                className="border border-gray-200 p-3 rounded-md text-lg"
+                className="border border-gray-200 p-3 rounded-md text-lg flex-1"
               />
               <input
-                type="datetime-local"
-                value={newEventEndTime}
-                onChange={(e) => setNewEventEndTime(e.target.value)}
+                type="time"
+                value={newEventEndHour}
+                onChange={(e) => setNewEventEndHour(e.target.value)}
                 required
-                className="border border-gray-200 p-3 rounded-md text-lg"
+                className="border border-gray-200 p-3 rounded-md text-lg flex-1"
               />
             </div>
             <button
