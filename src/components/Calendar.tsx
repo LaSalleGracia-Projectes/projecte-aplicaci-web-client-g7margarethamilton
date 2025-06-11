@@ -313,14 +313,17 @@ const Calendar: React.FC = () => {
               required
               className="border border-gray-200 p-3 rounded-md text-lg w-full"
             />
-            <input
-              type="number"
-              placeholder="Priority"
+            <label className="block font-medium">Priority</label>
+            <select
               value={newEventPriority}
               onChange={(e) => setNewEventPriority(Number(e.target.value))}
               required
               className="border border-gray-200 p-3 rounded-md text-lg w-full"
-            />
+            >
+              <option value={1}>1</option>
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+            </select>
             <div className="flex gap-4 w-full">
               <input
                 type="time"
