@@ -6,17 +6,20 @@ import {
   subWeeks,
   startOfWeek,
   addDays,
+  isSameWeek,
+  getDay,
+  isSameDay,
+  isWithinInterval,
+  parseISO,
 } from "date-fns";
 import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Edit,
   Trash2 as Trash,
 } from "lucide-react";
 import Header from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -38,10 +41,9 @@ const WEEK_DAYS = [
   { value: 5, label: "Viernes" },
   { value: 6, label: "Sábado" },
   { value: 7, label: "Domingo" },
-];
+] as const;
 type WeekDay = typeof WEEK_DAYS[number]["value"];
 
-// Tipos de datos
 interface Schedule {
   id: number;
   title: string;
@@ -63,7 +65,6 @@ interface ScheduleTask {
   created_at: string;
 }
 
-// Configuración del cliente Axios
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1",
   headers: {
@@ -80,16 +81,21 @@ export default function AgendaPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estado para nueva tarea semanal
+  // Día de la semana actual (1 = lunes, 7 = domingo)
+  const todayWeekDay = (() => {
+    const jsDay = getDay(new Date()); // 0 (domingo) - 6 (sábado)
+    return jsDay === 0 ? 7 : jsDay;
+  })();
+
+  // Estados para formularios
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
     start_time: "09:00",
     end_time: "10:00",
-    week_day: 1 as WeekDay,
+    week_day: todayWeekDay as WeekDay,
   });
 
-  // Estado para crear nuevas agendas
   const [newScheduleTitle, setNewScheduleTitle] = useState("");
 
   // Calcular días de la semana actual
@@ -123,7 +129,6 @@ export default function AgendaPage() {
           setSchedules(data);
           setSelectedScheduleId(data[0].id);
         } else if (schedules.length === 0) {
-          // Solo crea la agenda si no existe ninguna
           const newSchedule = await createDefaultSchedule();
           setSchedules([newSchedule]);
           setSelectedScheduleId(newSchedule.id);
@@ -182,8 +187,7 @@ export default function AgendaPage() {
     };
 
     fetchTasks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedScheduleId, user]);
+  }, [selectedScheduleId, user, currentWeek]);
 
   // Crear agenda por defecto
   const createDefaultSchedule = async (): Promise<Schedule> => {
@@ -249,6 +253,26 @@ export default function AgendaPage() {
     }
   };
 
+  // Validar que no haya dos tareas a la misma hora el mismo día en la semana visible
+  const isSameHourTask = (
+    start: string,
+    week_day: WeekDay
+  ) => {
+    // Solo tareas de la semana visible
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+    const weekEnd = addDays(weekStart, 6);
+
+    return tasks.some((task) => {
+      // Solo comparar tareas del mismo día y semana
+      const taskDate = dates[Number(task.week_day) - 1];
+      return (
+        task.week_day === week_day &&
+        isWithinInterval(taskDate, { start: weekStart, end: weekEnd }) &&
+        task.start_time.slice(0, 5) === start
+      );
+    });
+  };
+
   // Crear nueva tarea semanal
   const handleCreateTask = async () => {
     if (
@@ -264,6 +288,11 @@ export default function AgendaPage() {
 
     if (newTask.start_time >= newTask.end_time) {
       setError("La hora de inicio debe ser menor a la de fin.");
+      return;
+    }
+
+    if (isSameHourTask(newTask.start_time, newTask.week_day)) {
+      setError("no creo que puedas hacer dos cosas a la vez a la misma hora");
       return;
     }
 
@@ -298,7 +327,7 @@ export default function AgendaPage() {
         description: "",
         start_time: "09:00",
         end_time: "10:00",
-        week_day: 1,
+        week_day: todayWeekDay,
       });
     } catch (err: any) {
       setError(
@@ -343,9 +372,18 @@ export default function AgendaPage() {
     }
   };
 
-  // Obtener tareas por día de la semana
+  // Obtener tareas por día de la semana SOLO de la semana visible
   const getTasksForDay = (day: WeekDay) => {
-    return tasks.filter((task) => Number(task.week_day) === Number(day));
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+    const weekEnd = addDays(weekStart, 6);
+
+    return tasks.filter((task) => {
+      const taskDate = dates[Number(task.week_day) - 1];
+      return (
+        Number(task.week_day) === Number(day) &&
+        isWithinInterval(taskDate, { start: weekStart, end: weekEnd })
+      );
+    });
   };
 
   // Navegación entre semanas
@@ -460,13 +498,6 @@ export default function AgendaPage() {
                         </div>
                         <div className="flex justify-end mt-2 gap-1">
                           <button
-                            className="text-blue-500 hover:text-blue-700"
-                            onClick={() => {}}
-                            disabled={isLoading}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
                             className="text-red-500 hover:text-red-700"
                             onClick={() => handleDeleteTask(task.id)}
                             disabled={isLoading}
@@ -514,7 +545,7 @@ export default function AgendaPage() {
                     <label className="block text-sm font-medium">Hora Inicio</label>
                     <Input
                       type="time"
-                      value={newTask.start_time.slice(0, 5)}
+                      value={newTask.start_time}
                       onChange={(e) =>
                         setNewTask({
                           ...newTask,
@@ -527,7 +558,7 @@ export default function AgendaPage() {
                     <label className="block text-sm font-medium">Hora Fin</label>
                     <Input
                       type="time"
-                      value={newTask.end_time.slice(0, 5)}
+                      value={newTask.end_time}
                       onChange={(e) =>
                         setNewTask({
                           ...newTask,
@@ -544,7 +575,7 @@ export default function AgendaPage() {
                     onChange={(e) =>
                       setNewTask({
                         ...newTask,
-                        week_day: Number(e.target.value),
+                        week_day: Number(e.target.value) as WeekDay,
                       })
                     }
                     className="w-full p-2 border rounded"
