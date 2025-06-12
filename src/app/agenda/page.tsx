@@ -66,7 +66,6 @@ const api = axios.create({
 
 export default function AgendaPage() {
   const { user } = useAuth();
-  // Semana actual basada en la fecha del sistema
   const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -74,13 +73,11 @@ export default function AgendaPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Día de la semana actual (1 = lunes, 7 = domingo)
   const todayWeekDay = (() => {
-    const jsDay = getDay(new Date()); // 0 (domingo) - 6 (sábado)
+    const jsDay = getDay(new Date());
     return jsDay === 0 ? 7 : jsDay;
   })();
 
-  // Estados para formularios
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -91,15 +88,14 @@ export default function AgendaPage() {
 
   const [newScheduleTitle, setNewScheduleTitle] = useState("");
 
-  // Calcular días de la semana actual
   const getDatesOfWeek = () => {
-    const start = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Lunes
+    const start = startOfWeek(currentWeek, { weekStartsOn: 1 });
     return Array.from({ length: 7 }).map((_, i) => addDays(start, i));
   };
 
   const dates = getDatesOfWeek();
 
-  // Actualizar automáticamente la semana si cambia el lunes (o si el usuario deja la página abierta)
+  // Actualizar automáticamente la semana si cambia el lunes
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -107,10 +103,15 @@ export default function AgendaPage() {
       if (startOfCurrent.getTime() !== currentWeek.getTime()) {
         setCurrentWeek(startOfCurrent);
       }
-    }, 60 * 1000); // Comprobar cada minuto
-
+    }, 60 * 1000);
     return () => clearInterval(interval);
   }, [currentWeek]);
+
+  
+  useEffect(() => {
+    setTasks([]);
+    setError(null);
+  }, [selectedScheduleId]);
 
   // Cargar agendas del usuario
   useEffect(() => {
@@ -133,7 +134,10 @@ export default function AgendaPage() {
 
         if (Array.isArray(data) && data.length > 0) {
           setSchedules(data);
-          setSelectedScheduleId(data[0].id);
+          // Solo selecciona automáticamente si no hay ninguna seleccionada o la seleccionada ya no existe
+          if (!selectedScheduleId || !data.some(s => s.id === selectedScheduleId)) {
+            setSelectedScheduleId(data[0].id);
+          }
         } else if (schedules.length === 0) {
           const newSchedule = await createDefaultSchedule();
           setSchedules([newSchedule]);
@@ -158,9 +162,11 @@ export default function AgendaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Cargar tareas de la agenda seleccionada
+  // Cargar tareas de la agenda seleccionada y limpiar tareas al cambiar agenda
   useEffect(() => {
     if (!selectedScheduleId || !user?.email) return;
+
+    setTasks([]); // Limpia tareas antes de cargar las nuevas
 
     const fetchTasks = async () => {
       setIsLoading(true);
@@ -278,16 +284,13 @@ export default function AgendaPage() {
       const taskStart = convertTimeToMinutes(task.start_time.slice(0, 5));
       const taskEnd = convertTimeToMinutes(task.end_time.slice(0, 5));
 
-      // Comprobar si hay solapamiento de horas
+      // No permitir ningún tipo de solapamiento ni igualdad exacta de inicio o fin
       return (
-        (startMinutes >= taskStart && startMinutes < taskEnd) ||
-        (endMinutes > taskStart && endMinutes <= taskEnd) ||
-        (startMinutes <= taskStart && endMinutes > taskStart)
+        (startMinutes < taskEnd && endMinutes > taskStart)
       );
     });
   };
 
-  // Convertir tiempo a minutos para comparar
   const convertTimeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(":").map(Number);
     return hours * 60 + (minutes || 0);
@@ -392,7 +395,6 @@ export default function AgendaPage() {
     }
   };
 
-  // Obtener tareas por día de la semana y agenda seleccionada
   const getTasksForDay = (day: WeekDay) => {
     return tasks.filter(
       (task) =>
@@ -401,28 +403,28 @@ export default function AgendaPage() {
     );
   };
 
+  // NUEVO: Obtener tareas del día actual
+  const todayTasks = getTasksForDay(todayWeekDay);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 flex justify-center py-12 px-4">
         <div className="w-full max-w-4xl flex flex-col gap-8">
-          {/* Mostrar errores */}
           {error && (
             <div className="bg-red-100 text-red-800 p-4 rounded-md">
               {error}
             </div>
           )}
-          {isLoading && <p className="text-center">Cargando...</p>}
 
-          {/* Selección de agenda */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Agenda Semanal</h1>
 
             <select
               value={selectedScheduleId || ""}
-              onChange={(e) =>
-                setSelectedScheduleId(Number(e.target.value))
-              }
+              onChange={(e) => {
+                setSelectedScheduleId(Number(e.target.value));
+              }}
               disabled={isLoading || schedules.length === 0}
               className="p-2 border rounded"
             >
@@ -461,7 +463,6 @@ export default function AgendaPage() {
             </Dialog>
           </div>
 
-          {/* Cabecera de semana actual */}
           <div className="flex items-center justify-center gap-2">
             <span className="text-lg font-medium">
               {format(dates[0], "d MMM yyyy")} -{" "}
@@ -469,7 +470,6 @@ export default function AgendaPage() {
             </span>
           </div>
 
-          {/* Contenido de la semana */}
           <div className="grid grid-cols-7 gap-4 w-full">
             {dates.map((date, index) => {
               const dayNumber = (index + 1) as WeekDay;
@@ -477,7 +477,9 @@ export default function AgendaPage() {
               return (
                 <div
                   key={date.toString()}
-                  className="bg-gray-50 rounded p-2 min-h-[150px]"
+                  className={`bg-gray-50 rounded p-2 min-h-[150px] ${
+                    dayNumber === todayWeekDay ? "border-2 border-blue-400" : ""
+                  }`}
                 >
                   <div className="font-semibold mb-2">
                     {WEEK_DAYS[index].label}
@@ -518,7 +520,42 @@ export default function AgendaPage() {
             })}
           </div>
 
-          {/* Botón para añadir tarea */}
+          {/* NUEVO: Lista de tareas del día actual debajo del calendario */}
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-2">
+              Tareas de hoy ({WEEK_DAYS[todayWeekDay - 1].label})
+            </h2>
+            {todayTasks.length === 0 ? (
+              <div className="text-gray-400 text-sm">Sin tareas para hoy</div>
+            ) : (
+              <ul className="space-y-2">
+                {todayTasks.map((task) => (
+                  <li
+                    key={task.id}
+                    className="bg-white p-3 rounded shadow flex flex-col md:flex-row md:items-center md:justify-between"
+                  >
+                    <div>
+                      <div className="font-medium">{task.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {JSON.parse(task.content).description || "Sin descripción"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {task.start_time.slice(0, 5)} - {task.end_time.slice(0, 5)}
+                      </div>
+                    </div>
+                    <button
+                      className="text-red-500 hover:text-red-700 mt-2 md:mt-0"
+                      onClick={() => handleDeleteTask(task.id)}
+                      disabled={isLoading}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <Dialog>
             <DialogTrigger asChild>
               <Button className="gap-2 self-start">
@@ -596,7 +633,7 @@ export default function AgendaPage() {
                   onClick={handleCreateTask}
                   disabled={!newTask.title || isLoading}
                 >
-                  {isLoading ? "Guardando..." : "Guardar Tarea"}
+                  Guardar Tarea
                 </Button>
               </div>
             </DialogContent>
