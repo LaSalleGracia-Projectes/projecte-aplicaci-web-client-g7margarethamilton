@@ -323,7 +323,7 @@ const Calendar: React.FC = () => {
             {currentEvents.length > 0 &&
               currentEvents.map((event) => (
                 <li
-                  className="border border-gray-200 shadow px-4 py-2 rounded-md text-blue-800 flex items-center justify-between"
+                  className="border border-gray-200 shadow-sm px-4 py-2 rounded-md text-gray-900 flex items-center justify-between hover:bg-gray-50 transition-colors"
                   key={event.id}
                 >
                   <div className="flex items-center gap-2 flex-1">
@@ -331,7 +331,7 @@ const Calendar: React.FC = () => {
                       type="checkbox"
                       checked={event.extendedProps.is_completed}
                       onChange={() => handleToggleComplete(event.id, event.extendedProps.is_completed)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-500"
                       onClick={(e) => e.stopPropagation()}
                     />
                     <div 
@@ -349,11 +349,11 @@ const Calendar: React.FC = () => {
                         setIsDialogOpen(true);
                       }}
                     >
-                      <span className={event.extendedProps.is_completed ? "line-through text-gray-500" : ""}>
+                      <span className={event.extendedProps.is_completed ? "line-through text-gray-400" : ""}>
                         {event.title}
                       </span>
                       <br />
-                      <label className="text-slate-950">
+                      <label className="text-gray-500 text-sm">
                         {formatDate(new Date(event.start), {
                           year: "numeric",
                           month: "short",
@@ -366,7 +366,7 @@ const Calendar: React.FC = () => {
                     </div>
                   </div>
                   <button
-                    className="ml-2 text-red-500 hover:text-red-700"
+                    className="ml-2 text-red-500 hover:text-red-700 transition-colors"
                     title="Delete event"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -388,7 +388,7 @@ const Calendar: React.FC = () => {
             headerToolbar={{
               left: "prev,next today",
               center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+              right: "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             initialView="dayGridMonth"
             editable={true}
@@ -426,7 +426,7 @@ const Calendar: React.FC = () => {
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleSaveEvent}>
             {selectedDate && (
-              <div className="text-center font-semibold text-lg">
+              <div className="text-center font-semibold text-lg text-gray-900">
                 {selectedDate.toLocaleDateString()}
               </div>
             )}
@@ -436,21 +436,21 @@ const Calendar: React.FC = () => {
               value={newEventTitle}
               onChange={(e) => setNewEventTitle(e.target.value)}
               required
-              className="border border-gray-200 p-3 rounded-md text-lg w-full"
+              className="border border-gray-200 p-3 rounded-md text-lg w-full focus:outline-none focus:ring-2 focus:ring-gray-400"
             />
             <textarea
               placeholder="Event Content"
               value={newEventContent}
               onChange={(e) => setNewEventContent(e.target.value)}
               required
-              className="border border-gray-200 p-3 rounded-md text-lg w-full"
+              className="border border-gray-200 p-3 rounded-md text-lg w-full focus:outline-none focus:ring-2 focus:ring-gray-400"
             />
-            <label className="block font-medium">Priority</label>
+            <label className="block font-medium text-gray-900">Priority</label>
             <select
               value={newEventPriority}
               onChange={(e) => setNewEventPriority(Number(e.target.value))}
               required
-              className="border border-gray-200 p-3 rounded-md text-lg w-full"
+              className="border border-gray-200 p-3 rounded-md text-lg w-full focus:outline-none focus:ring-2 focus:ring-gray-400"
             >
               <option value={1}>1</option>
               <option value={2}>2</option>
@@ -462,26 +462,26 @@ const Calendar: React.FC = () => {
                 value={newEventStartHour}
                 onChange={(e) => setNewEventStartHour(e.target.value)}
                 required
-                className="border border-gray-200 p-3 rounded-md text-lg flex-1"
+                className="border border-gray-200 p-3 rounded-md text-lg flex-1 focus:outline-none focus:ring-2 focus:ring-gray-400"
               />
               <input
                 type="time"
                 value={newEventEndHour}
                 onChange={(e) => setNewEventEndHour(e.target.value)}
                 required
-                className="border border-gray-200 p-3 rounded-md text-lg flex-1"
+                className="border border-gray-200 p-3 rounded-md text-lg flex-1 focus:outline-none focus:ring-2 focus:ring-gray-400"
               />
             </div>
             <button
               type="submit"
-              className="bg-green-500 text-white p-3 rounded-md w-full"
+              className="bg-gray-900 text-white p-3 rounded-md w-full hover:bg-gray-800 transition-colors"
             >
               {editingEventId ? "Save Changes" : "Add Event"}
             </button>
             {editingEventId && (
               <button
                 type="button"
-                className="bg-red-500 text-white p-3 rounded-md w-full mt-2"
+                className="bg-red-500 text-white p-3 rounded-md w-full mt-2 hover:bg-red-600 transition-colors"
                 onClick={() => {
                   setEventIdToDelete(editingEventId);
                   setDeleteDialogOpen(true);
@@ -500,10 +500,16 @@ const Calendar: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
-          <div className="mb-4">Are you sure you want to delete this event? This action cannot be undone.</div>
+          <div className="mb-4 text-gray-600">Are you sure you want to delete this event? This action cannot be undone.</div>
           <div className="flex gap-4">
             <button
-              className="bg-red-500 text-white p-3 rounded-md w-full"
+              className="bg-gray-100 text-gray-900 p-3 rounded-md w-full hover:bg-gray-200 transition-colors"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="bg-red-500 text-white p-3 rounded-md w-full hover:bg-red-600 transition-colors"
               onClick={async () => {
                 if (!eventIdToDelete) return;
                 try {
@@ -531,12 +537,6 @@ const Calendar: React.FC = () => {
               }}
             >
               Delete
-            </button>
-            <button
-              className="bg-gray-200 text-gray-800 p-3 rounded-md w-full"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
             </button>
           </div>
         </DialogContent>

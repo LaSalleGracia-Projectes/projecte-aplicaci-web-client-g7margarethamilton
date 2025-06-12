@@ -49,7 +49,7 @@
 
       localStorage.setItem("tokenWeb", data.tokenWeb);
       localStorage.setItem("user", JSON.stringify(data.user));
-      window.location.href = "/"; 
+      window.location.href = "/calendar"; 
       
     } catch (err) {
       console.error("Error:", err.message);
