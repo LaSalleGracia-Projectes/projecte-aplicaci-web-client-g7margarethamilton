@@ -55,6 +55,7 @@ interface ScheduleTask {
   id_schedule: number;
   id_category: number | null;
   created_at: string;
+  done?: boolean;
 }
 
 const api = axios.create({
@@ -72,6 +73,8 @@ export default function AgendaPage() {
   const [tasks, setTasks] = useState<ScheduleTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [doneCount, setDoneCount] = useState(0);
 
   const todayWeekDay = (() => {
     const jsDay = getDay(new Date());
@@ -95,7 +98,6 @@ export default function AgendaPage() {
 
   const dates = getDatesOfWeek();
 
-  // Actualizar automáticamente la semana si cambia el lunes
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -107,13 +109,11 @@ export default function AgendaPage() {
     return () => clearInterval(interval);
   }, [currentWeek]);
 
-  
   useEffect(() => {
     setTasks([]);
     setError(null);
   }, [selectedScheduleId]);
 
-  // Cargar agendas del usuario
   useEffect(() => {
     if (!user?.email) {
       setError("Por favor, inicia sesión.");
@@ -134,7 +134,6 @@ export default function AgendaPage() {
 
         if (Array.isArray(data) && data.length > 0) {
           setSchedules(data);
-          // Solo selecciona automáticamente si no hay ninguna seleccionada o la seleccionada ya no existe
           if (!selectedScheduleId || !data.some(s => s.id === selectedScheduleId)) {
             setSelectedScheduleId(data[0].id);
           }
@@ -162,11 +161,10 @@ export default function AgendaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Cargar tareas de la agenda seleccionada y limpiar tareas al cambiar agenda
   useEffect(() => {
     if (!selectedScheduleId || !user?.email) return;
 
-    setTasks([]); // Limpia tareas antes de cargar las nuevas
+    setTasks([]);
 
     const fetchTasks = async () => {
       setIsLoading(true);
@@ -201,7 +199,21 @@ export default function AgendaPage() {
     fetchTasks();
   }, [selectedScheduleId, user, currentWeek]);
 
-  // Crear agenda por defecto
+  useEffect(() => {
+    setDoneCount(tasks.filter((t) => t.done).length);
+  }, [tasks]);
+
+  // SOLO permite marcar como hecho en la lista de tareas de hoy
+  const toggleDone = (id: number) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id && Number(task.week_day) === todayWeekDay
+          ? { ...task, done: !task.done }
+          : task
+      )
+    );
+  };
+
   const createDefaultSchedule = async (): Promise<Schedule> => {
     try {
       const response = await api.post("/schedule", {
@@ -226,7 +238,6 @@ export default function AgendaPage() {
     }
   };
 
-  // Crear nueva agenda
   const handleCreateSchedule = async () => {
     if (!newScheduleTitle || !user?.email) {
       setError("Faltan datos requeridos");
@@ -265,7 +276,6 @@ export default function AgendaPage() {
     }
   };
 
-  // Validar solapamiento estricto de horas en la agenda y día seleccionados
   const isOverlapping = (
     start: string,
     end: string,
@@ -283,8 +293,6 @@ export default function AgendaPage() {
       }
       const taskStart = convertTimeToMinutes(task.start_time.slice(0, 5));
       const taskEnd = convertTimeToMinutes(task.end_time.slice(0, 5));
-
-      // No permitir ningún tipo de solapamiento ni igualdad exacta de inicio o fin
       return (
         (startMinutes < taskEnd && endMinutes > taskStart)
       );
@@ -296,7 +304,6 @@ export default function AgendaPage() {
     return hours * 60 + (minutes || 0);
   };
 
-  // Crear nueva tarea semanal
   const handleCreateTask = async () => {
     if (
       !newTask.title ||
@@ -365,7 +372,6 @@ export default function AgendaPage() {
     }
   };
 
-  // Eliminar tarea
   const handleDeleteTask = async (id: number) => {
     if (!selectedScheduleId || !user?.email) return;
 
@@ -403,7 +409,6 @@ export default function AgendaPage() {
     );
   };
 
-  // NUEVO: Obtener tareas del día actual
   const todayTasks = getTasksForDay(todayWeekDay);
 
   return (
@@ -419,7 +424,6 @@ export default function AgendaPage() {
 
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Agenda Semanal</h1>
-
             <select
               value={selectedScheduleId || ""}
               onChange={(e) => {
@@ -493,25 +497,28 @@ export default function AgendaPage() {
                     {dayTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="bg-white p-2 rounded shadow-sm"
+                        className={`bg-white p-2 rounded shadow-sm flex items-center gap-2 ${
+                          task.done && dayNumber === todayWeekDay ? "opacity-60 line-through" : ""
+                        }`}
                       >
-                        <h4 className="font-medium">{task.title}</h4>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {JSON.parse(task.content).description || "Sin descripción"}
-                        </p>
-                        <div className="mt-1 text-xs text-gray-500">
-                          {task.start_time.slice(0, 5)} -{" "}
-                          {task.end_time.slice(0, 5)}
+                        {/* SOLO mostrar info, NO check */}
+                        <div className="flex-1">
+                          <h4 className="font-medium">{task.title}</h4>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {JSON.parse(task.content).description || "Sin descripción"}
+                          </p>
+                          <div className="mt-1 text-xs text-gray-500">
+                            {task.start_time.slice(0, 5)} -{" "}
+                            {task.end_time.slice(0, 5)}
+                          </div>
                         </div>
-                        <div className="flex justify-end mt-2 gap-1">
-                          <button
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDeleteTask(task.id)}
-                            disabled={isLoading}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <button
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleDeleteTask(task.id)}
+                          disabled={isLoading}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -520,10 +527,13 @@ export default function AgendaPage() {
             })}
           </div>
 
-          {/* NUEVO: Lista de tareas del día actual debajo del calendario */}
+          {/* Lista de tareas del día actual debajo del calendario */}
           <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-2">
+            <h2 className="text-xl font-semibold mb-2 flex items-center gap-4">
               Tareas de hoy ({WEEK_DAYS[todayWeekDay - 1].label})
+              <span className="text-base text-green-700 font-semibold">
+                {doneCount} / {tasks.length} hechas
+              </span>
             </h2>
             {todayTasks.length === 0 ? (
               <div className="text-gray-400 text-sm">Sin tareas para hoy</div>
@@ -532,15 +542,26 @@ export default function AgendaPage() {
                 {todayTasks.map((task) => (
                   <li
                     key={task.id}
-                    className="bg-white p-3 rounded shadow flex flex-col md:flex-row md:items-center md:justify-between"
+                    className={`bg-white p-3 rounded shadow flex flex-col md:flex-row md:items-center md:justify-between ${
+                      task.done ? "opacity-60 line-through" : ""
+                    }`}
                   >
-                    <div>
-                      <div className="font-medium">{task.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {JSON.parse(task.content).description || "Sin descripción"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {task.start_time.slice(0, 5)} - {task.end_time.slice(0, 5)}
+                    <div className="flex items-center gap-2">
+                      {/* SOLO aquí el check */}
+                      <input
+                        type="checkbox"
+                        checked={!!task.done}
+                        onChange={() => toggleDone(task.id)}
+                        className="accent-green-600"
+                      />
+                      <div>
+                        <div className="font-medium">{task.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {JSON.parse(task.content).description || "Sin descripción"}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {task.start_time.slice(0, 5)} - {task.end_time.slice(0, 5)}
+                        </div>
                       </div>
                     </div>
                     <button
