@@ -257,6 +257,55 @@ const Calendar: React.FC = () => {
     }
   };
 
+  const handleToggleComplete = async (eventId: string, currentStatus: boolean) => {
+    try {
+      const token = getTokenWeb();
+      if (!token) {
+        throw new Error("No authentication token found.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/calendar-task/${eventId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          is_completed: !currentStatus,
+          // Necesitamos enviar todos los campos requeridos
+          title: currentEvents.find(e => e.id === eventId)?.title || "",
+          content: currentEvents.find(e => e.id === eventId)?.extendedProps.content || "",
+          priority: currentEvents.find(e => e.id === eventId)?.extendedProps.priority || 1,
+          start_time: currentEvents.find(e => e.id === eventId)?.start || "",
+          end_time: currentEvents.find(e => e.id === eventId)?.end || "",
+          id_calendar: 8,
+          id_category: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error updating event status");
+      }
+
+      // Actualizar el estado local
+      setCurrentEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === eventId
+            ? {
+                ...event,
+                extendedProps: {
+                  ...event.extendedProps,
+                  is_completed: !currentStatus,
+                },
+              }
+            : event
+        )
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Error updating event status");
+    }
+  };
+
   return (
     <div>
       <div className="flex w-full px-10 justify-start items-start gap-8">
@@ -277,19 +326,29 @@ const Calendar: React.FC = () => {
                   className="border border-gray-200 shadow px-4 py-2 rounded-md text-blue-800 flex items-center justify-between"
                   key={event.id}
                 >
-                  <div>
-                    {event.title}
-                    <br />
-                    <label className="text-slate-950">
-                      {formatDate(new Date(event.start), {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })} {" "}
-                      {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      {event.end &&
-                        " - " + new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={event.extendedProps.is_completed}
+                      onChange={() => handleToggleComplete(event.id, event.extendedProps.is_completed)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <span className={event.extendedProps.is_completed ? "line-through text-gray-500" : ""}>
+                        {event.title}
+                      </span>
+                      <br />
+                      <label className="text-slate-950">
+                        {formatDate(new Date(event.start), {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })} {" "}
+                        {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {event.end &&
+                          " - " + new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </label>
+                    </div>
                   </div>
                   <button
                     className="ml-2 text-red-500 hover:text-red-700"
