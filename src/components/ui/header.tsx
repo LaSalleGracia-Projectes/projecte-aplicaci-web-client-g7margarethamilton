@@ -52,7 +52,7 @@ export default function Header() {
                 { href: "/about-us", label: "About us" },
                 { href: "/contact", label: "Contact" },
                 ...(user ? [{ href: "/agenda", label: "Agenda" }] : []),
-                ...(user ? [{ href: "/calendar", label: "Calendar" }] : []),
+                //...(user ? [{ href: "/calendar", label: "Calendar" }] : []),
                 
               ].map((item) => (
                 <NavigationMenuItem key={item.href}>
