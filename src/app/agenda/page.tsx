@@ -98,6 +98,20 @@ export default function AgendaPage() {
 
   const dates = getDatesOfWeek();
 
+  // Mantener agenda seleccionada tras recarga
+  useEffect(() => {
+    const storedId = localStorage.getItem("selectedScheduleId");
+    if (storedId) {
+      setSelectedScheduleId(Number(storedId));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedScheduleId) {
+      localStorage.setItem("selectedScheduleId", String(selectedScheduleId));
+    }
+  }, [selectedScheduleId]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -134,7 +148,11 @@ export default function AgendaPage() {
 
         if (Array.isArray(data) && data.length > 0) {
           setSchedules(data);
-          if (!selectedScheduleId || !data.some(s => s.id === selectedScheduleId)) {
+          // Si la agenda seleccionada no existe, selecciona la primera
+          if (
+            !selectedScheduleId ||
+            !data.some((s: Schedule) => s.id === selectedScheduleId)
+          ) {
             setSelectedScheduleId(data[0].id);
           }
         } else if (schedules.length === 0) {
@@ -502,8 +520,8 @@ export default function AgendaPage() {
                         }`}
                       >
                         {/* SOLO mostrar info, NO check */}
-                        <div className="flex-1">
-                          <h4 className="font-medium">{task.title}</h4>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium truncate">{task.title}</h4>
                           <p className="text-xs text-muted-foreground truncate">
                             {JSON.parse(task.content).description || "Sin descripción"}
                           </p>
@@ -513,9 +531,11 @@ export default function AgendaPage() {
                           </div>
                         </div>
                         <button
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 flex-shrink-0 ml-2"
+                          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                           onClick={() => handleDeleteTask(task.id)}
                           disabled={isLoading}
+                          tabIndex={-1}
                         >
                           <Trash className="h-4 w-4" />
                         </button>
