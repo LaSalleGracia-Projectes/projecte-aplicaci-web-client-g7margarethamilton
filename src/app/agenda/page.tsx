@@ -2,19 +2,11 @@
 import { useState, useEffect } from "react";
 import {
   format,
-  addWeeks,
-  subWeeks,
   startOfWeek,
   addDays,
-  isSameWeek,
   getDay,
-  isSameDay,
-  isWithinInterval,
-  parseISO,
 } from "date-fns";
 import {
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Trash2 as Trash,
 } from "lucide-react";
@@ -74,7 +66,8 @@ const api = axios.create({
 
 export default function AgendaPage() {
   const { user } = useAuth();
-  const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
+  // Semana actual basada en la fecha del sistema
+  const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [tasks, setTasks] = useState<ScheduleTask[]>([]);
@@ -105,6 +98,19 @@ export default function AgendaPage() {
   };
 
   const dates = getDatesOfWeek();
+
+  // Actualizar automáticamente la semana si cambia el lunes (o si el usuario deja la página abierta)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const startOfCurrent = startOfWeek(now, { weekStartsOn: 1 });
+      if (startOfCurrent.getTime() !== currentWeek.getTime()) {
+        setCurrentWeek(startOfCurrent);
+      }
+    }, 60 * 1000); // Comprobar cada minuto
+
+    return () => clearInterval(interval);
+  }, [currentWeek]);
 
   // Cargar agendas del usuario
   useEffect(() => {
@@ -253,24 +259,38 @@ export default function AgendaPage() {
     }
   };
 
-  // Validar que no haya dos tareas a la misma hora el mismo día en la semana visible
-  const isSameHourTask = (
+  // Validar solapamiento estricto de horas en la agenda y día seleccionados
+  const isOverlapping = (
     start: string,
+    end: string,
     week_day: WeekDay
   ) => {
-    // Solo tareas de la semana visible
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const weekEnd = addDays(weekStart, 6);
+    const startMinutes = convertTimeToMinutes(start);
+    const endMinutes = convertTimeToMinutes(end);
 
     return tasks.some((task) => {
-      // Solo comparar tareas del mismo día y semana
-      const taskDate = dates[Number(task.week_day) - 1];
+      if (
+        task.week_day !== week_day ||
+        task.id_schedule !== selectedScheduleId
+      ) {
+        return false;
+      }
+      const taskStart = convertTimeToMinutes(task.start_time.slice(0, 5));
+      const taskEnd = convertTimeToMinutes(task.end_time.slice(0, 5));
+
+      // Comprobar si hay solapamiento de horas
       return (
-        task.week_day === week_day &&
-        isWithinInterval(taskDate, { start: weekStart, end: weekEnd }) &&
-        task.start_time.slice(0, 5) === start
+        (startMinutes >= taskStart && startMinutes < taskEnd) ||
+        (endMinutes > taskStart && endMinutes <= taskEnd) ||
+        (startMinutes <= taskStart && endMinutes > taskStart)
       );
     });
+  };
+
+  // Convertir tiempo a minutos para comparar
+  const convertTimeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + (minutes || 0);
   };
 
   // Crear nueva tarea semanal
@@ -291,7 +311,7 @@ export default function AgendaPage() {
       return;
     }
 
-    if (isSameHourTask(newTask.start_time, newTask.week_day)) {
+    if (isOverlapping(newTask.start_time, newTask.end_time, newTask.week_day)) {
       setError("no creo que puedas hacer dos cosas a la vez a la misma hora");
       return;
     }
@@ -372,23 +392,14 @@ export default function AgendaPage() {
     }
   };
 
-  // Obtener tareas por día de la semana SOLO de la semana visible
+  // Obtener tareas por día de la semana y agenda seleccionada
   const getTasksForDay = (day: WeekDay) => {
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const weekEnd = addDays(weekStart, 6);
-
-    return tasks.filter((task) => {
-      const taskDate = dates[Number(task.week_day) - 1];
-      return (
+    return tasks.filter(
+      (task) =>
         Number(task.week_day) === Number(day) &&
-        isWithinInterval(taskDate, { start: weekStart, end: weekEnd })
-      );
-    });
+        task.id_schedule === selectedScheduleId
+    );
   };
-
-  // Navegación entre semanas
-  const handlePrevWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
-  const handleNextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -450,18 +461,12 @@ export default function AgendaPage() {
             </Dialog>
           </div>
 
-          {/* Navegación de semanas */}
+          {/* Cabecera de semana actual */}
           <div className="flex items-center justify-center gap-2">
-            <Button variant="outline" size="icon" onClick={handlePrevWeek} disabled={isLoading}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
             <span className="text-lg font-medium">
               {format(dates[0], "d MMM yyyy")} -{" "}
               {format(dates[6], "d MMM yyyy")}
             </span>
-            <Button variant="outline" size="icon" onClick={handleNextWeek} disabled={isLoading}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Contenido de la semana */}
