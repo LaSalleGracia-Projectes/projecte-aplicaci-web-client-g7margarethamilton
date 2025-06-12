@@ -326,14 +326,29 @@ const Calendar: React.FC = () => {
                   className="border border-gray-200 shadow px-4 py-2 rounded-md text-blue-800 flex items-center justify-between"
                   key={event.id}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
                     <input
                       type="checkbox"
                       checked={event.extendedProps.is_completed}
                       onChange={() => handleToggleComplete(event.id, event.extendedProps.is_completed)}
                       className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      onClick={(e) => e.stopPropagation()}
                     />
-                    <div>
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => {
+                        setEditingEventId(event.id);
+                        setNewEventTitle(event.title);
+                        setNewEventContent(event.extendedProps.content);
+                        setNewEventPriority(event.extendedProps.priority);
+                        const startDate = new Date(event.start);
+                        setSelectedDate(new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
+                        setNewEventStartHour(startDate.toISOString().slice(11, 16));
+                        const endDate = new Date(event.end);
+                        setNewEventEndHour(endDate.toISOString().slice(11, 16));
+                        setIsDialogOpen(true);
+                      }}
+                    >
                       <span className={event.extendedProps.is_completed ? "line-through text-gray-500" : ""}>
                         {event.title}
                       </span>
@@ -353,7 +368,8 @@ const Calendar: React.FC = () => {
                   <button
                     className="ml-2 text-red-500 hover:text-red-700"
                     title="Delete event"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setEventIdToDelete(event.id);
                       setDeleteDialogOpen(true);
                     }}
